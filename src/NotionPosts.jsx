@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Home, ChevronRight, Search, Plus, Settings, Type,
     Heading1, Heading2, Heading3, List, Code as CodeIcon, FunctionSquare,
-    GripVertical, Bold, Italic, Palette, Type as FontIcon, FilePlus, ChevronDown, Copy, Trash, FileText
+    GripVertical, Bold, Italic, Palette, Type as FontIcon, FilePlus, ChevronDown, Copy, Trash, FileText, Download, Save, Lock
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -553,10 +553,32 @@ export default function NotionPosts() {
     const [pageToDelete, setPageToDelete] = useState(null);
 
     const [pages, setPages] = useState(initialPages);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const handleExportJSON = () => {
-        navigator.clipboard.writeText(JSON.stringify(pages, null, 2));
-        alert("Posts Data JSON copied to clipboard! Paste it into src/data/postsData.js");
+    const handleSaveData = async () => {
+        setIsSaving(true);
+        try {
+            const response = await fetch('/api/save-posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pages)
+            });
+            const result = await response.json();
+            if (result.success) {
+                const btn = document.getElementById('save-btn-text');
+                if (btn) {
+                    btn.innerText = "Saved!";
+                    setTimeout(() => { if (btn) btn.innerText = "Save"; }, 2000);
+                }
+            } else {
+                alert("Failed to save data: " + result.error);
+            }
+        } catch (error) {
+            console.error("Save error:", error);
+            alert("Error saving data. Check console.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const [activePageId, setActivePageId] = useState(pages[0].id);
@@ -733,8 +755,9 @@ export default function NotionPosts() {
                     </div>
                     {!isReadOnly && (
                         <div className="flex items-center">
-                            <button onClick={handleExportJSON} className="px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm">
-                                Export JSON Data
+                            <button onClick={handleSaveData} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm disabled:opacity-50">
+                                <Save size={14} />
+                                <span id="save-btn-text">{isSaving ? 'Saving...' : 'Save'}</span>
                             </button>
                         </div>
                     )}
