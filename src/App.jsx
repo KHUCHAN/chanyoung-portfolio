@@ -155,6 +155,43 @@ const EDUCATION = [
     }
 ];
 
+const EXPERIENCE = [
+    {
+        role: "Senior Consultant / Consultant",
+        company: "삼정KPMG (KPMG Korea)",
+        location: "Seoul, South Korea",
+        date: "Jan 2023 - Dec 2025",
+        logo: "/kpmg_logo.png",
+        details: [
+            "Global Compliance RegTech: Engineered legal regulatory mapping via NLP, Semantic Chunking & GraphDB.",
+            "Global Maritime Risk Prediction: Led LLM-based Early Warning System development with Random Forest.",
+            "AML System Enhancement: PMO & Tech Lead for tier-1 securites. Optimized RBA/CTR/STR via K-Means Clustering.",
+            "Forensic Data Analysis: Uncovered M&A, kickback, and inventory fraud schemes (Graph Analysis, OpenCV, SAP ABAP)."
+        ]
+    },
+    {
+        role: "Undergraduate Research Assistant",
+        company: "SMART LAB (Kyung Hee Univ.)",
+        location: "Seoul, South Korea",
+        date: "Jan 2022 - Dec 2022",
+        logo: "/kyunghee_logo.png",
+        details: [
+            "ESG Research: Analyzed 5 years of environmental data across 900+ companies for K-ESG evaluation weights.",
+            "Advanced Analytics: Applied EDA, MDS, and PCA to identify sector-specific environmental impact patterns."
+        ]
+    },
+    {
+        role: "Sergeant",
+        company: "Republic of Korea Army (8th Infantry Division)",
+        location: "Goseong, South Korea",
+        date: "Aug 2016 - May 2018",
+        logo: "/roka_logo.png",
+        details: [
+            "Managed engineering equipment repair parts and optimized inventory cycles."
+        ]
+    }
+];
+
 function EducationSection() {
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -221,6 +258,87 @@ function EducationSection() {
                                                 </span>
                                             ))}
                                         </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            </div>
+        </section>
+    );
+}
+
+function ExperienceSection() {
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.15, delayChildren: 0.2 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 30, scale: 0.95 },
+        visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 100, damping: 15 } }
+    };
+
+    return (
+        <section id="experience" className="pb-24 pt-12 px-6 relative overflow-hidden">
+            <div className="max-w-6xl mx-auto relative z-10">
+                <div className="mb-16 text-center md:text-left">
+                    <h2 className="text-sm font-bold text-deep-blue uppercase tracking-widest mb-3">Professional Journey</h2>
+                    <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-ink-black">Experience</h3>
+                </div>
+
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.2 }}
+                    className="grid md:grid-cols-2 gap-6"
+                >
+                    {EXPERIENCE.map((exp, idx) => (
+                        <motion.div
+                            key={idx}
+                            variants={itemVariants}
+                            whileHover={{ scale: 1.02, transition: { type: "spring", stiffness: 400 } }}
+                            className={cn(
+                                "bg-white/80 backdrop-blur-sm rounded-3xl p-8 lg:p-10 border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(10,37,64,0.12)] transition-all duration-500 relative group overflow-hidden flex flex-col justify-between gap-6",
+                                idx === 0 ? "md:col-span-2" : "" // KPMG takes full width for emphasis
+                            )}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-sky-50/0 to-indigo-50/0 group-hover:from-sky-50 group-hover:to-indigo-50/50 transition-colors duration-500 -z-10" />
+
+                            <div className="flex flex-col gap-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-16 h-16 shrink-0 rounded-2xl bg-white flex items-center justify-center shadow-sm overflow-hidden border border-gray-100 p-2">
+                                        <img src={exp.logo} alt={`${exp.company} Logo`} className="w-full h-full object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                        <Briefcase size={28} className="text-deep-blue hidden" />
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="inline-block text-xs font-bold text-deep-blue bg-sky-50 px-3 py-1 rounded-full uppercase tracking-wider mb-1">
+                                            {exp.date}
+                                        </span>
+                                        <p className="text-xs font-bold text-slate-muted">
+                                            {exp.location}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xl md:text-2xl font-bold text-ink-black mb-2 leading-tight">{exp.company}</h4>
+                                    <h5 className="text-md font-bold text-deep-blue mb-4">{exp.role}</h5>
+
+                                    {exp.details.length > 0 && (
+                                        <ul className="space-y-3">
+                                            {exp.details.map((detail, dIdx) => (
+                                                <li key={dIdx} className="text-sm font-medium text-slate-muted flex items-start gap-3">
+                                                    <span className="text-sky-400 mt-1 shrink-0 text-[10px]">■</span>
+                                                    <span className="leading-relaxed">{detail}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     )}
                                 </div>
                             </div>
@@ -640,6 +758,7 @@ function PortfolioPage() {
             <main>
                 <Hero />
                 <EducationSection />
+                <ExperienceSection />
                 <FeaturedWork />
                 <ProjectsPreview />
                 <Extras />
