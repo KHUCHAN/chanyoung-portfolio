@@ -1,0 +1,20 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+	<title>요청하신 페이지가 존재하지 않습니다...</title>
+	<link rel="stylesheet" href="/html/common/css/admin_ott.css">
+</head>
+<body>
+	<div id="errWrap" class="error">
+		<p class="error__txt">홈페이지 이용에 불편을 드려서 죄송합니다.</p>
+		<a href="/" class="error__btn error__main">메인으로</a>
+		<a href="#" class="error__btn error__back" onclick="javascript:history.go(-1)">이전 페이지</a>
+	</div>
+
+</body>
+</html>

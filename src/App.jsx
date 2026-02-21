@@ -298,7 +298,7 @@ function ExperienceSection() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    className="grid lg:grid-cols-3 md:grid-cols-1 gap-6"
+                    className="grid md:grid-cols-3 gap-6"
                 >
                     {EXPERIENCE.map((exp, idx) => (
                         <motion.div
@@ -331,11 +331,19 @@ function ExperienceSection() {
 
                                     {exp.details.length > 0 && (
                                         <div className="flex flex-wrap gap-x-3 gap-y-2 mt-4">
-                                            {exp.details.map((detail, dIdx) => (
-                                                <span key={dIdx} className="px-3 py-1 bg-slate-50 border border-sky-100 text-deep-blue text-xs font-bold rounded-lg font-mono tracking-tight">
-                                                    {detail}
-                                                </span>
-                                            ))}
+                                            {exp.details.map((detail, dIdx) => {
+                                                const isGoldHighlight = detail === "Outstanding Paper Award" || detail === "Battalion Commander's Commendation (x2)" || detail === "Outstanding Participant of Global Elite Program";
+                                                return (
+                                                    <span key={dIdx} className={cn(
+                                                        "px-3 py-1 text-xs font-bold rounded-lg font-mono tracking-tight border",
+                                                        isGoldHighlight
+                                                            ? "bg-yellow-50 border-yellow-400 text-yellow-800 shadow-sm"
+                                                            : "bg-slate-50 border-sky-100 text-deep-blue"
+                                                    )}>
+                                                        {detail}
+                                                    </span>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
