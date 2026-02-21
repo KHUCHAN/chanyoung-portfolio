@@ -157,37 +157,38 @@ const EDUCATION = [
 
 const EXPERIENCE = [
     {
-        role: "Senior Consultant / Consultant",
-        company: "삼정KPMG (KPMG Korea)",
+        role: "Senior Consultant",
+        company: "KPMG",
         location: "Seoul, South Korea",
         date: "Jan 2023 - Dec 2025",
         logo: "/kpmg_logo.png",
         details: [
-            "Global Compliance RegTech: Engineered legal regulatory mapping via NLP, Semantic Chunking & GraphDB.",
-            "Global Maritime Risk Prediction: Led LLM-based Early Warning System development with Random Forest.",
-            "AML System Enhancement: PMO & Tech Lead for tier-1 securites. Optimized RBA/CTR/STR via K-Means Clustering.",
-            "Forensic Data Analysis: Uncovered M&A, kickback, and inventory fraud schemes (Graph Analysis, OpenCV, SAP ABAP)."
+            "Global Compliance RegTech: Engineered NLP & GraphDB regulatory mapping system.",
+            "Global Maritime Risk: Led LLM & RF-based Early Warning System development.",
+            "AML System Enhancement: PMO & Tech Lead for tier-1 securities (K-Means Clustering).",
+            "Forensics: Uncovered fraud schemes via Graph Analysis, OpenCV, and SAP ABAP."
         ]
     },
     {
-        role: "Undergraduate Research Assistant",
-        company: "SMART LAB (Kyung Hee Univ.)",
+        role: "Research Assistant",
+        company: "Kyung Hee Univ.",
         location: "Seoul, South Korea",
         date: "Jan 2022 - Dec 2022",
         logo: "/kyunghee_logo.png",
         details: [
-            "ESG Research: Analyzed 5 years of environmental data across 900+ companies for K-ESG evaluation weights.",
-            "Advanced Analytics: Applied EDA, MDS, and PCA to identify sector-specific environmental impact patterns."
+            "ESG Research: Analyzed 5-year data of 900+ companies for K-ESG evaluation weights.",
+            "Advanced Analytics: Applied EDA, MDS, PCA for sector-specific environmental patterns."
         ]
     },
     {
         role: "Sergeant",
-        company: "Republic of Korea Army (8th Infantry Division)",
+        company: "ROKA",
         location: "Goseong, South Korea",
         date: "Aug 2016 - May 2018",
         logo: "/roka_logo.png",
         details: [
-            "Managed engineering equipment repair parts and optimized inventory cycles."
+            "Managed engineering equipment repair parts to ensure data accuracy.",
+            "Optimized stock levels forecasting inventory cycles via Excel."
         ]
     }
 ];
@@ -296,17 +297,14 @@ function ExperienceSection() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    className="grid md:grid-cols-2 gap-6"
+                    className="grid lg:grid-cols-3 md:grid-cols-1 gap-6"
                 >
                     {EXPERIENCE.map((exp, idx) => (
                         <motion.div
                             key={idx}
                             variants={itemVariants}
                             whileHover={{ scale: 1.02, transition: { type: "spring", stiffness: 400 } }}
-                            className={cn(
-                                "bg-white/80 backdrop-blur-sm rounded-3xl p-8 lg:p-10 border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(10,37,64,0.12)] transition-all duration-500 relative group overflow-hidden flex flex-col justify-between gap-6",
-                                idx === 0 ? "md:col-span-2" : "" // KPMG takes full width for emphasis
-                            )}
+                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 lg:p-10 border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(10,37,64,0.12)] transition-all duration-500 relative group overflow-hidden flex flex-col justify-between gap-6"
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-sky-50/0 to-indigo-50/0 group-hover:from-sky-50 group-hover:to-indigo-50/50 transition-colors duration-500 -z-10" />
 
