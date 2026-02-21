@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail, MapPin, Linkedin, Send } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, Linkedin, Send, Github, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ContactPage() {
     const navigate = useNavigate();
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyEmail = () => {
+        navigator.clipboard.writeText("kimchany@usc.edu");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     return (
         <div className="min-h-screen bg-[#FBFBFA] flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -36,19 +43,23 @@ export default function ContactPage() {
                 </div>
 
                 <div className="space-y-4">
-                    <a
-                        href="mailto:kimchany@usc.edu"
-                        className="flex items-center gap-4 w-full p-4 rounded-2xl border border-gray-100 bg-white hover:border-sky-300 hover:shadow-md transition-all group"
+                    <button
+                        onClick={handleCopyEmail}
+                        className="flex items-center gap-4 w-full p-4 rounded-2xl border border-gray-100 bg-white hover:border-sky-300 hover:shadow-md transition-all group text-left relative"
                     >
                         <div className="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center text-deep-blue group-hover:bg-deep-blue group-hover:text-white transition-colors shrink-0">
-                            <Mail size={24} />
+                            {copied ? <Check size={24} className="text-green-500 group-hover:text-white" /> : <Mail size={24} />}
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-sm font-bold text-slate-muted mb-0.5">Direct Email</h3>
+                            <h3 className="text-sm font-bold text-slate-muted mb-0.5">Email (Click to copy)</h3>
                             <p className="text-lg font-bold text-ink-black group-hover:text-deep-blue transition-colors">kimchany@usc.edu</p>
                         </div>
-                        <Send size={20} className="text-gray-300 group-hover:text-deep-blue transition-colors group-hover:translate-x-1" />
-                    </a>
+                        {copied ? (
+                            <span className="text-xs font-bold text-green-500 absolute right-4 top-1/2 -translate-y-1/2 bg-green-50 px-2 py-1 rounded">Copied!</span>
+                        ) : (
+                            <Send size={20} className="text-gray-300 group-hover:text-deep-blue transition-colors group-hover:translate-x-1" />
+                        )}
+                    </button>
 
                     <a
                         href="https://www.linkedin.com/in/chanyoung-kim-84bb88299/"
@@ -64,6 +75,22 @@ export default function ContactPage() {
                             <p className="text-lg font-bold text-ink-black group-hover:text-[#0A66C2] transition-colors">Chanyoung Kim</p>
                         </div>
                         <Send size={20} className="text-gray-300 group-hover:text-[#0A66C2] transition-colors group-hover:translate-x-1" />
+                    </a>
+
+                    <a
+                        href="https://github.com/KHUCHAN"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-4 w-full p-4 rounded-2xl border border-gray-100 bg-white hover:border-sky-300 hover:shadow-md transition-all group"
+                    >
+                        <div className="w-12 h-12 rounded-full bg-sky-50 flex items-center justify-center text-deep-blue group-hover:bg-[#181717] group-hover:text-white transition-colors shrink-0">
+                            <Github size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-sm font-bold text-slate-muted mb-0.5">GitHub</h3>
+                            <p className="text-lg font-bold text-ink-black group-hover:text-[#181717] transition-colors">KHUCHAN</p>
+                        </div>
+                        <Send size={20} className="text-gray-300 group-hover:text-[#181717] transition-colors group-hover:translate-x-1" />
                     </a>
 
                     <div className="flex items-center gap-4 w-full p-4 rounded-2xl border border-transparent bg-slate-50">
