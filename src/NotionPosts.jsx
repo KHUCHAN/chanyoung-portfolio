@@ -8,6 +8,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router-dom';
+import { initialPages } from './data/postsData';
 
 /* Code Editor & Syntax Highlighting */
 import Editor from 'react-simple-code-editor';
@@ -41,7 +42,7 @@ const COMMAND_MENU_ITEMS = [
 const COLORS = ['#000000', '#E03E3E', '#D9730D', '#0F7B6C', '#0B6E99', '#6940A5', '#e9a3b9'];
 const FONTS = ['Inter, sans-serif', 'Georgia, serif', '"Fira Code", monospace', '"Comic Sans MS", cursive'];
 
-const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDown, onFocus, placeholder, autoFocus }) => {
+const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDown, onFocus, placeholder, autoFocus, readOnly }) => {
     const contentEditable = useRef(null);
 
     useEffect(() => {
@@ -52,7 +53,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     }, []);
 
     useEffect(() => {
-        if (contentEditable.current && autoFocus) {
+        if (contentEditable.current && autoFocus && !readOnly) {
             // focus and place caret at end
             contentEditable.current.focus();
             try {
@@ -68,7 +69,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
                 // ignore empty node ranges
             }
         }
-    }, [autoFocus]);
+    }, [autoFocus, readOnly]);
 
     // Sync external changes (commands, formatting updates from parent)
     useEffect(() => {
@@ -80,7 +81,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     }, [html]);
 
     const emitChange = () => {
-        if (contentEditable.current) {
+        if (contentEditable.current && !readOnly) {
             onChange(contentEditable.current.innerHTML);
         }
     };
@@ -88,7 +89,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     return React.createElement(tagName || 'div', {
         ref: contentEditable,
         className: cn('outline-none empty:before:content-[attr(placeholder)] empty:before:text-gray-300', className),
-        contentEditable: true,
+        contentEditable: !readOnly,
         suppressContentEditableWarning: true,
         onInput: emitChange,
         onBlur: emitChange,
@@ -106,7 +107,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     });
 });
 
-function Block({ block, index, updateBlock, addBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex }) {
+function Block({ block, index, updateBlock, addBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly }) {
     const [showCommands, setShowCommands] = useState(false);
     const [commandQuery, setCommandQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -129,6 +130,7 @@ function Block({ block, index, updateBlock, addBlock, removeBlock, setFocus, cre
     }, [selectedIndex, showCommands]);
 
     const handleKeyDown = (e) => {
+        if (isReadOnly) return;
         if (e.key === '/') {
             setShowCommands(true);
             setCommandQuery('');
@@ -229,22 +231,25 @@ function Block({ block, index, updateBlock, addBlock, removeBlock, setFocus, cre
     return (
         <div
             className={cn(
-                "group relative flex items-start -ml-12 pl-12 pr-4 transition-colors mb-1",
-                dragOverIndex === index ? "border-t-2 border-blue-500 pt-1" : ""
+                "group relative flex items-start pr-4 transition-colors mb-1",
+                !isReadOnly ? "-ml-12 pl-12" : "ml-0 pl-4",
+                dragOverIndex === index && !isReadOnly ? "border-t-2 border-blue-500 pt-1" : ""
             )}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
+            onDragOver={!isReadOnly ? onDragOver : undefined}
+            onDragLeave={!isReadOnly ? onDragLeave : undefined}
+            onDrop={!isReadOnly ? onDrop : undefined}
         >
-            <div
-                className="absolute left-[18px] top-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab hover:bg-gray-100 p-1 rounded text-gray-400 flex items-center justify-center select-none"
-                contentEditable={false}
-                draggable
-                onDragStart={onDragStart}
-                onClick={() => setBlockMenuOpen(!blockMenuOpen)}
-            >
-                <GripVertical size={16} />
-            </div>
+            {!isReadOnly && (
+                <div
+                    className="absolute left-[18px] top-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab hover:bg-gray-100 p-1 rounded text-gray-400 flex items-center justify-center select-none"
+                    contentEditable={false}
+                    draggable
+                    onDragStart={onDragStart}
+                    onClick={() => setBlockMenuOpen(!blockMenuOpen)}
+                >
+                    <GripVertical size={16} />
+                </div>
+            )}
 
             {blockMenuOpen && (
                 <div className="absolute left-[18px] top-8 bg-white border border-gray-200 shadow-xl rounded-lg py-1 z-50 w-48 text-sm" contentEditable={false}>
@@ -324,11 +329,12 @@ function Block({ block, index, updateBlock, addBlock, removeBlock, setFocus, cre
                                         html={block.content}
                                         onChange={handleChange}
                                         onKeyDown={handleKeyDown}
-                                        onFocus={() => setFocus(index)}
-                                        autoFocus={block.focused}
-                                        placeholder={block.type === 'p' ? (block.content === '' && block.focused ? "Type '/' for commands" : "") : `${block.type === 'h1' ? 'Heading 1' : ''}`}
+                                        onFocus={() => { if (!isReadOnly) setFocus(index); }}
+                                        autoFocus={block.focused && !isReadOnly}
+                                        placeholder={block.type === 'p' && !isReadOnly ? (block.content === '' && block.focused ? "Type '/' for commands" : "") : (block.type === 'h1' ? 'Heading 1' : '')}
                                         className={getBlockStyle()}
                                         tagName={block.type === 'h1' ? 'h1' : block.type === 'h2' ? 'h2' : block.type === 'h3' ? 'h3' : 'div'}
+                                        readOnly={isReadOnly}
                                     />
                                 </div>
                             )}
@@ -450,7 +456,7 @@ function FormattingToolbar() {
     );
 }
 
-function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, createNewPage, setPageToDelete, setIsSearchOpen }) {
+function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, createNewPage, setPageToDelete, setIsSearchOpen, isReadOnly }) {
     const navigate = useNavigate();
 
     // Render Page Tree (To show nested subpages)
@@ -473,11 +479,13 @@ function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, crea
                     <span className="text-gray-400 shrink-0">{page.icon || '📄'}</span>
                     <span className="truncate flex-1 text-left">{page.title.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
                 </button>
-                <div className="absolute right-2 top-1.5 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center gap-1 z-10">
-                    <button onClick={(e) => { e.stopPropagation(); setPageToDelete(page.id); }} className="p-1 hover:bg-red-100 text-gray-400 hover:text-red-500 rounded" title="Delete Page">
-                        <Trash size={14} />
-                    </button>
-                </div>
+                {!isReadOnly && (
+                    <div className="absolute right-2 top-1.5 opacity-0 group-hover/page:opacity-100 transition-opacity flex items-center gap-1 z-10">
+                        <button onClick={(e) => { e.stopPropagation(); setPageToDelete(page.id); }} className="p-1 hover:bg-red-100 text-gray-400 hover:text-red-500 rounded" title="Delete Page">
+                            <Trash size={14} />
+                        </button>
+                    </div>
+                )}
                 {children.length > 0 && (
                     <div className="border-l border-gray-100 ml-4 mt-0.5 mb-1 pl-1">
                         {children.map(child => renderPageTree(child, level + 1))}
@@ -523,7 +531,7 @@ function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, crea
                 <div className="mt-8 px-2 flex-grow overflow-y-auto">
                     <div className="px-3 pb-1 text-xs font-bold text-gray-400 group flex items-center justify-between">
                         <span>Private Pages</span>
-                        <Plus size={14} onClick={() => createNewPage(null, null)} className="opacity-0 group-hover:opacity-100 cursor-pointer hover:text-ink-black transition-opacity" />
+                        {!isReadOnly && <Plus size={14} onClick={() => createNewPage(null, null)} className="opacity-0 group-hover:opacity-100 cursor-pointer hover:text-ink-black transition-opacity" />}
                     </div>
 
                     <div className="space-y-0.5 mt-1 pr-2">
@@ -536,40 +544,20 @@ function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, crea
 }
 
 export default function NotionPosts() {
+    const isReadOnly = !import.meta.env.DEV;
+
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [dragOverIndex, setDragOverIndex] = useState(null);
     const [pageToDelete, setPageToDelete] = useState(null);
 
-    const [pages, setPages] = useState([
-        {
-            id: 'page1',
-            title: 'Technical Research & Post-Mortems',
-            icon: '📘',
-            cover: null,
-            parentId: null,
-            blocks: [
-                { id: '1', type: 'h1', content: 'Technical Research & Post-Mortems', focused: false },
-                { id: '2', type: 'p', content: 'This is my internal knowledge base where I drop quick notes and technical breakdowns of things I build.', focused: false },
-                { id: '3', type: 'code', content: "function helloWorld() {\n  console.log('Syntax Highlighting built right in!');\n}", focused: false },
-                { id: '4', type: 'p', content: 'Try out the Math Blocks using KaTeX too:', focused: false },
-                { id: '5', type: 'math', content: "f(a) = \\frac{1}{2\\pi i} \\oint\\frac{f(z)}{z-a}dz", focused: false },
-                { id: '6', type: 'p', content: 'Try typing / to see the command menu!', focused: true }
-            ]
-        },
-        {
-            id: 'page2',
-            title: 'AML Modeling Notes',
-            icon: '🛡️',
-            cover: null,
-            parentId: null,
-            blocks: [
-                { id: '1', type: 'h1', content: 'Anti-Money Laundering Algorithms', focused: false },
-                { id: '2', type: 'p', content: 'Notes regarding network graph optimization.', focused: true }
-            ]
-        }
-    ]);
+    const [pages, setPages] = useState(initialPages);
+
+    const handleExportJSON = () => {
+        navigator.clipboard.writeText(JSON.stringify(pages, null, 2));
+        alert("Posts Data JSON copied to clipboard! Paste it into src/data/postsData.js");
+    };
 
     const [activePageId, setActivePageId] = useState(pages[0].id);
 
@@ -712,7 +700,7 @@ export default function NotionPosts() {
 
     return (
         <div className="flex h-screen bg-white text-ink-black font-sans overflow-hidden selection:bg-sky-200">
-            <FormattingToolbar />
+            {!isReadOnly && <FormattingToolbar />}
             <Sidebar
                 isOpen={sidebarOpen}
                 setIsOpen={setSidebarOpen}
@@ -722,6 +710,7 @@ export default function NotionPosts() {
                 createNewPage={createNewPage}
                 setPageToDelete={setPageToDelete}
                 setIsSearchOpen={setIsSearchOpen}
+                isReadOnly={isReadOnly}
             />
 
             <main className="flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300">
@@ -742,32 +731,43 @@ export default function NotionPosts() {
                             <span className="text-ink-black font-bold truncate max-w-[200px] md:max-w-none">{activePage?.title?.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
                         </div>
                     </div>
+                    {!isReadOnly && (
+                        <div className="flex items-center">
+                            <button onClick={handleExportJSON} className="px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm">
+                                Export JSON Data
+                            </button>
+                        </div>
+                    )}
                 </header>
 
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
                     {activePage?.cover && (
                         <div className="w-full h-48 md:h-64 relative group">
                             <img src={activePage.cover} alt="Cover" className="w-full h-full object-cover" />
-                            <button onClick={() => updatePageMetadata(activePageId, { cover: null })} className="absolute top-4 right-4 bg-white/80 backdrop-blur text-sm font-bold text-gray-600 px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Change cover</button>
+                            {!isReadOnly && (
+                                <button onClick={() => updatePageMetadata(activePageId, { cover: null })} className="absolute top-4 right-4 bg-white/80 backdrop-blur text-sm font-bold text-gray-600 px-3 py-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">Change cover</button>
+                            )}
                         </div>
                     )}
 
                     <div className="max-w-[900px] mx-auto w-full px-8 md:px-24 py-16 md:py-32 cursor-text min-h-full" onClick={(e) => {
-                        if (e.target === e.currentTarget && activePage.blocks.length > 0) {
+                        if (e.target === e.currentTarget && activePage.blocks.length > 0 && !isReadOnly) {
                             setFocus(activePage.blocks.length - 1);
                         }
                     }}>
 
                         <div className="group mb-8 relative">
                             {activePage?.icon && (
-                                <div className="text-[5rem] leading-none mb-4 -ml-1 cursor-pointer hover:bg-gray-100 w-fit rounded-lg transition-colors" onClick={handleAddIcon}>
+                                <div className="text-[5rem] leading-none mb-4 -ml-1 cursor-pointer hover:bg-gray-100 w-fit rounded-lg transition-colors" onClick={!isReadOnly ? handleAddIcon : undefined}>
                                     {activePage.icon}
                                 </div>
                             )}
-                            <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
-                                {!activePage?.icon && <button onClick={handleAddIcon} className="text-sm font-bold text-gray-400 hover:text-ink-black flex items-center gap-1 transition-colors"><span className="text-lg">😊</span> Add icon</button>}
-                                {!activePage?.cover && <button onClick={handleAddCover} className="text-sm font-bold text-gray-400 hover:text-ink-black flex items-center gap-1 transition-colors"><span className="text-lg">🖼️</span> Add cover</button>}
-                            </div>
+                            {!isReadOnly && (
+                                <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity mb-2">
+                                    {!activePage?.icon && <button onClick={handleAddIcon} className="text-sm font-bold text-gray-400 hover:text-ink-black flex items-center gap-1 transition-colors"><span className="text-lg">😊</span> Add icon</button>}
+                                    {!activePage?.cover && <button onClick={handleAddCover} className="text-sm font-bold text-gray-400 hover:text-ink-black flex items-center gap-1 transition-colors"><span className="text-lg">🖼️</span> Add cover</button>}
+                                </div>
+                            )}
                         </div>
 
                         <div className="pb-32">
@@ -788,6 +788,7 @@ export default function NotionPosts() {
                                     setActivePageId={setActivePageId}
                                     dragOverIndex={dragOverIndex}
                                     setDragOverIndex={setDragOverIndex}
+                                    isReadOnly={isReadOnly}
                                 />
                             ))}
                         </div>
