@@ -163,8 +163,11 @@ const EXPERIENCE = [
         date: "Jan 2023 - Dec 2025",
         logo: "/kpmg_logo.png",
         details: [
-            "Role: Data Analysis, Data Mart, AML Consulting, Forensic Discovery",
-            "Awards: Outstanding Participant of Global Elite Program"
+            "Data Analysis",
+            "Data Mart",
+            "AML Consulting",
+            "Forensic Discovery",
+            "Outstanding Participant of Global Elite Program"
         ]
     },
     {
@@ -174,8 +177,8 @@ const EXPERIENCE = [
         date: "Jan 2022 - Dec 2022",
         logo: "/kyunghee_logo.png",
         details: [
-            "Role: ESG Research",
-            "Awards: Outstanding Paper Award"
+            "ESG Research",
+            "Outstanding Paper Award"
         ]
     },
     {
@@ -185,8 +188,8 @@ const EXPERIENCE = [
         date: "Aug 2016 - May 2018",
         logo: "/roka_logo.png",
         details: [
-            "Role: Equipment Parts Management",
-            "Awards: Battalion Commander's Commendation (x2)"
+            "Equipment Parts Management",
+            "Battalion Commander's Commendation (x2)"
         ]
     }
 ];
