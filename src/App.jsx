@@ -163,10 +163,8 @@ const EXPERIENCE = [
         date: "Jan 2023 - Dec 2025",
         logo: "/kpmg_logo.png",
         details: [
-            "Global Compliance RegTech: Engineered NLP & GraphDB regulatory mapping system.",
-            "Global Maritime Risk: Led LLM & RF-based Early Warning System development.",
-            "AML System Enhancement: PMO & Tech Lead for tier-1 securities (K-Means Clustering).",
-            "Forensics: Uncovered fraud schemes via Graph Analysis, OpenCV, and SAP ABAP."
+            "Role: Data Analysis, Data Mart, AML Consulting, Forensic Discovery",
+            "Awards: Outstanding Participant of Global Elite Program"
         ]
     },
     {
@@ -176,8 +174,8 @@ const EXPERIENCE = [
         date: "Jan 2022 - Dec 2022",
         logo: "/kyunghee_logo.png",
         details: [
-            "ESG Research: Analyzed 5-year data of 900+ companies for K-ESG evaluation weights.",
-            "Advanced Analytics: Applied EDA, MDS, PCA for sector-specific environmental patterns."
+            "Role: ESG Research",
+            "Awards: Outstanding Paper Award"
         ]
     },
     {
@@ -187,8 +185,8 @@ const EXPERIENCE = [
         date: "Aug 2016 - May 2018",
         logo: "/roka_logo.png",
         details: [
-            "Managed engineering equipment repair parts to ensure data accuracy.",
-            "Optimized stock levels forecasting inventory cycles via Excel."
+            "Role: Equipment Parts Management",
+            "Awards: Battalion Commander's Commendation (x2)"
         ]
     }
 ];
@@ -329,14 +327,13 @@ function ExperienceSection() {
                                     <h5 className="text-md font-bold text-deep-blue mb-4">{exp.role}</h5>
 
                                     {exp.details.length > 0 && (
-                                        <ul className="space-y-3">
+                                        <div className="flex flex-wrap gap-x-3 gap-y-2 mt-4">
                                             {exp.details.map((detail, dIdx) => (
-                                                <li key={dIdx} className="text-sm font-medium text-slate-muted flex items-start gap-3">
-                                                    <span className="text-sky-400 mt-1 shrink-0 text-[10px]">■</span>
-                                                    <span className="leading-relaxed">{detail}</span>
-                                                </li>
+                                                <span key={dIdx} className="px-3 py-1 bg-slate-50 border border-sky-100 text-deep-blue text-xs font-bold rounded-lg font-mono tracking-tight">
+                                                    {detail}
+                                                </span>
                                             ))}
-                                        </ul>
+                                        </div>
                                     )}
                                 </div>
                             </div>
