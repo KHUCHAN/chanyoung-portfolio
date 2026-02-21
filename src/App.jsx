@@ -86,7 +86,7 @@ function Hero() {
                     </h1>
 
                     <p className="text-xl md:text-2xl text-slate-muted font-medium max-w-xl">
-                        AI/Data Engineer specializing in AML & Risk Analytics.
+                        AI/Data Engineer specializing in Finance & Business.
                     </p>
 
                     <div className="flex flex-wrap items-center gap-4 pt-4">
