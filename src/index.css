@@ -8,6 +8,12 @@
   text-align: inherit !important;
 }
 
+/* Toggle empty placeholder */
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #d1d5db;
+}
+
 @layer utilities {
   .fade-up {
     animation: fadeUp 0.65s ease both;

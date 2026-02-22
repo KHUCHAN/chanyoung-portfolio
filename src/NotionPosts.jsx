@@ -37,6 +37,7 @@ const COMMAND_MENU_ITEMS = [
     { id: 'code', label: 'Code', description: 'Syntax highlighted code.', icon: CodeIcon },
     { id: 'math', label: 'Math Equation', description: 'KaTeX block equation.', icon: FunctionSquare },
     { id: 'table', label: 'Table', description: 'Simple grid.', icon: Table },
+    { id: 'toggle', label: 'Toggle', description: 'Collapsible content.', icon: ChevronRight },
     { id: 'link', label: 'Link to Page', description: 'Link to an existing page.', icon: Link2 },
     { id: 'page', label: 'Page', description: 'Embed a sub-page.', icon: FilePlus },
 ];
@@ -138,7 +139,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     });
 });
 
-function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode, pasteMultiLine, isSelected, clearSelection }) {
+function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode, pasteMultiLine, isSelected, clearSelection, updateBlocksForActivePage }) {
     const [showCommands, setShowCommands] = useState(false);
     const [commandQuery, setCommandQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -503,12 +504,9 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                             onChange={(val) => updateCell(rIndex, cIndex, val)}
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter' && !e.shiftKey) {
-                                                                    // prevent default but do not jump out of table natively
-                                                                    // We just allow shift+enter for new line, regular enter jumps out? 
-                                                                    // Let's just prevent default if they try to jump out via enter
+                                                                    // prevent creating new blocks — stay in table
                                                                 }
                                                             }}
-                                                            onFocus={() => { if (!isReadOnly) setFocus(index); }}
                                                             className="outline-none min-h-[1.5em] p-2"
                                                             readOnly={isReadOnly}
                                                         />
@@ -633,32 +631,167 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                         )}
                                     </div>
                                 )
-                                    /* Standard Editable Text Types */
-                                    : (
-                                        <div className="w-full flex-1 relative">
-                                            <EditableBlock
-                                                html={block.content}
-                                                onChange={handleChange}
-                                                onKeyDown={handleKeyDown}
-                                                onImagePaste={(base64) => {
-                                                    if (block.content.trim() === '' || block.content === '<br>') {
-                                                        updateBlock(block.id, { type: 'image', content: base64 });
-                                                    } else {
-                                                        insertBlock(index, { type: 'image', content: base64 });
-                                                    }
-                                                }}
-                                                onMultiLinePaste={(lines) => {
-                                                    if (pasteMultiLine) pasteMultiLine(index, block.type, lines);
-                                                }}
-                                                onFocus={() => { if (!isReadOnly) setFocus(index); }}
-                                                autoFocus={block.focused && !isReadOnly}
-                                                placeholder={block.type === 'p' && !isReadOnly ? (block.content === '' && block.focused ? "Type '/' for commands" : "") : (block.type === 'h1' ? 'Heading 1' : '')}
-                                                className={getBlockStyle()}
-                                                tagName={block.type === 'h1' ? 'h1' : block.type === 'h2' ? 'h2' : block.type === 'h3' ? 'h3' : 'div'}
-                                                readOnly={isReadOnly}
-                                            />
+                                    /* Toggle Block */
+                                    : block.type === 'toggle' ? (
+                                        <div className="w-full my-1">
+                                            <div className="flex items-start gap-1">
+                                                <button
+                                                    onClick={() => updateBlock(block.id, { toggled: !block.toggled })}
+                                                    className="shrink-0 mt-[0.35em] p-0.5 rounded hover:bg-gray-100 transition-transform duration-200"
+                                                    style={{ transform: block.toggled ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                                                    contentEditable={false}
+                                                >
+                                                    <ChevronRight size={16} className="text-gray-500" />
+                                                </button>
+                                                <div className="flex-1">
+                                                    <EditableBlock
+                                                        html={block.content}
+                                                        onChange={handleChange}
+                                                        onKeyDown={handleKeyDown}
+                                                        onFocus={() => { if (!isReadOnly) setFocus(index); }}
+                                                        autoFocus={block.focused && !isReadOnly}
+                                                        placeholder={!isReadOnly ? 'Toggle heading' : ''}
+                                                        className="text-base font-medium text-ink-black leading-relaxed"
+                                                        tagName="div"
+                                                        readOnly={isReadOnly}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {block.toggled && (
+                                                <div
+                                                    className="ml-7 pl-3 border-l-2 border-gray-200 mt-1 min-h-[2em] transition-colors rounded"
+                                                    onDragOver={(e) => {
+                                                        if (isReadOnly) return;
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        e.currentTarget.classList.add('bg-blue-50', 'border-blue-400');
+                                                    }}
+                                                    onDragLeave={(e) => {
+                                                        e.currentTarget.classList.remove('bg-blue-50', 'border-blue-400');
+                                                    }}
+                                                    onDrop={(e) => {
+                                                        if (isReadOnly) return;
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        e.currentTarget.classList.remove('bg-blue-50', 'border-blue-400');
+                                                        const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                                                        if (isNaN(draggedIndex) || draggedIndex === index) return;
+                                                        const allBlocks = pages.find(p => p.id === activePageId)?.blocks;
+                                                        if (!allBlocks || !allBlocks[draggedIndex]) return;
+                                                        const draggedBlock = { ...allBlocks[draggedIndex] };
+                                                        // Atomic update: add to children + remove from page
+                                                        const newBlocks = allBlocks
+                                                            .filter((_, i) => i !== draggedIndex)
+                                                            .map(b => {
+                                                                if (b.id === block.id) {
+                                                                    return { ...b, children: [...(b.children || []), { ...draggedBlock, focused: false }] };
+                                                                }
+                                                                return b;
+                                                            });
+                                                        updateBlocksForActivePage(newBlocks);
+                                                    }}
+                                                >
+                                                    {(block.children && block.children.length > 0) ? (
+                                                        block.children.map((child, ci) => (
+                                                            <div key={child.id} className="group/child flex items-start gap-2 py-1 relative">
+                                                                {!isReadOnly && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            // Move child back out as a regular block below toggle
+                                                                            const allBlocks = pages.find(p => p.id === activePageId)?.blocks;
+                                                                            if (!allBlocks) return;
+                                                                            const newChildren = block.children.filter((_, i) => i !== ci);
+                                                                            const toggleIdx = allBlocks.findIndex(b => b.id === block.id);
+                                                                            const newBlocks = allBlocks.map(b => {
+                                                                                if (b.id === block.id) return { ...b, children: newChildren };
+                                                                                return b;
+                                                                            });
+                                                                            newBlocks.splice(toggleIdx + 1, 0, { ...child, focused: true });
+                                                                            updateBlocksForActivePage(newBlocks);
+                                                                        }}
+                                                                        className="opacity-0 group-hover/child:opacity-100 shrink-0 text-gray-400 hover:text-red-500 transition-all p-0.5 rounded hover:bg-gray-100 mt-0.5"
+                                                                        title="Move out of toggle"
+                                                                    >
+                                                                        <ChevronRight size={12} className="rotate-180" />
+                                                                    </button>
+                                                                )}
+                                                                <div className="flex-1 min-w-0">
+                                                                    {child.type === 'image' ? (
+                                                                        <img src={child.content} alt="" className="max-w-full rounded-lg max-h-48 object-contain" />
+                                                                    ) : child.type === 'math' ? (
+                                                                        <div className="overflow-x-auto py-1">
+                                                                            <BlockMath math={child.content || '\\text{empty}'} />
+                                                                        </div>
+                                                                    ) : child.type === 'code' ? (
+                                                                        <pre className="bg-gray-50 rounded-lg p-3 text-sm font-mono overflow-x-auto border">
+                                                                            <code>{child.content}</code>
+                                                                        </pre>
+                                                                    ) : (
+                                                                        <div
+                                                                            className={cn(
+                                                                                "text-ink-black",
+                                                                                child.type === 'h1' ? 'text-2xl font-bold' :
+                                                                                    child.type === 'h2' ? 'text-xl font-bold' :
+                                                                                        child.type === 'h3' ? 'text-lg font-bold' :
+                                                                                            child.type === 'bullet' ? 'flex items-start gap-2' :
+                                                                                                'text-base'
+                                                                            )}
+                                                                        >
+                                                                            {child.type === 'bullet' && <span className="mt-[0.55em] w-1.5 h-1.5 rounded-full bg-ink-black shrink-0" />}
+                                                                            <span dangerouslySetInnerHTML={{ __html: child.content || '' }} />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div
+                                                            className="text-gray-300 text-sm py-1 cursor-text"
+                                                            contentEditable={!isReadOnly}
+                                                            suppressContentEditableWarning
+                                                            onInput={(e) => {
+                                                                const text = e.currentTarget.textContent?.trim();
+                                                                if (text) {
+                                                                    updateBlock(block.id, {
+                                                                        children: [{ id: Date.now().toString(), type: 'p', content: text, focused: false }]
+                                                                    });
+                                                                    e.currentTarget.textContent = '';
+                                                                }
+                                                            }}
+                                                            data-placeholder="Drag blocks here or type..."
+                                                            style={{ minHeight: '1.5em' }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    )
+                                        /* Standard Editable Text Types */
+                                        : (
+                                            <div className="w-full flex-1 relative">
+                                                <EditableBlock
+                                                    html={block.content}
+                                                    onChange={handleChange}
+                                                    onKeyDown={handleKeyDown}
+                                                    onImagePaste={(base64) => {
+                                                        if (block.content.trim() === '' || block.content === '<br>') {
+                                                            updateBlock(block.id, { type: 'image', content: base64 });
+                                                        } else {
+                                                            insertBlock(index, { type: 'image', content: base64 });
+                                                        }
+                                                    }}
+                                                    onMultiLinePaste={(lines) => {
+                                                        if (pasteMultiLine) pasteMultiLine(index, block.type, lines);
+                                                    }}
+                                                    onFocus={() => { if (!isReadOnly) setFocus(index); }}
+                                                    autoFocus={block.focused && !isReadOnly}
+                                                    placeholder={block.type === 'p' && !isReadOnly ? (block.content === '' && block.focused ? "Type '/' for commands" : "") : (block.type === 'h1' ? 'Heading 1' : '')}
+                                                    className={getBlockStyle()}
+                                                    tagName={block.type === 'h1' ? 'h1' : block.type === 'h2' ? 'h2' : block.type === 'h3' ? 'h3' : 'div'}
+                                                    readOnly={isReadOnly}
+                                                />
+                                            </div>
+                                        )}
 
                 {/* Command Menu Popup - scrollable to 6 items */}
                 {showCommands && (
@@ -1388,6 +1521,7 @@ export default function NotionPosts() {
                                     pasteMultiLine={pasteMultiLine}
                                     isSelected={selectedBlockIds.has(block.id)}
                                     clearSelection={clearSelection}
+                                    updateBlocksForActivePage={updateBlocksForActivePage}
                                 />
                             ))}
                         </div>
