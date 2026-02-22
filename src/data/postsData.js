@@ -206,17 +206,90 @@ export const initialPages = [
             {
                 "id": "1771751887756",
                 "type": "table",
-                "content": "[[\"<br>\",\"Linear model\",\"flexible model\"],[\"Accuracy\",\"⬇️\",\"⬆️\"],[\"Interpretability\",\"⬆️\",\"⬇️\"],[\"Fit\",\"Under fit\",\"Over fit\"]]",
+                "content": "[[\"<br>\",\"Linear model\",\"flexible model\"],[\"Accuracy\",\"⬇️\",\"⬆️\"],[\"Interpretability\",\"⬆️\",\"⬇️\"],[\"Fit\",\"Under fit\",\"Over fit\"],[\"Interpretability\",\"Parsimony\",\"black-box\"]]",
                 "focused": false
             },
             {
                 "id": "1771751885594",
+                "type": "toggle",
+                "content": "Interpret / Flex by model",
+                "focused": false,
+                "toggled": false
+            },
+            {
+                "id": "1771711253030",
+                "type": "h3",
+                "content": "Assessing Model Accuracy",
+                "focused": false
+            },
+            {
+                "id": "1771753146055",
+                "type": "math",
+                "content": "MSE_{\\text{tr}} = Ave[yi-\\hat{xi}]^2",
+                "focused": false
+            },
+            {
+                "id": "1771753553208",
+                "type": "bullet",
+                "content": "need to use test data not training data to compute Model Accuracy",
+                "focused": false
+            },
+            {
+                "id": "1771753595792",
                 "type": "p",
                 "content": "",
                 "focused": true
             },
             {
-                "id": "1771711253030",
+                "id": "1771753528216",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753496775",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753492786",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753488826",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753473765",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753469910",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753463087",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753440558",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771753399048",
                 "type": "p",
                 "content": "",
                 "focused": false
