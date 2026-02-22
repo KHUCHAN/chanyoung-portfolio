@@ -44,7 +44,7 @@ const COMMAND_MENU_ITEMS = [
 const COLORS = ['#000000', '#E03E3E', '#D9730D', '#0F7B6C', '#0B6E99', '#6940A5', '#e9a3b9'];
 const FONTS = ['Inter, sans-serif', 'Georgia, serif', '"Fira Code", monospace', '"Comic Sans MS", cursive'];
 
-const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDown, onImagePaste, onFocus, placeholder, autoFocus, readOnly }) => {
+const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDown, onImagePaste, onMultiLinePaste, onFocus, placeholder, autoFocus, readOnly }) => {
     const contentEditable = useRef(null);
 
     useEffect(() => {
@@ -119,6 +119,18 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
                     return;
                 }
             }
+            // Handle multi-line text paste: split into separate blocks
+            const plainText = e.clipboardData.getData('text/plain');
+            if (plainText && plainText.includes('\n') && onMultiLinePaste) {
+                e.preventDefault();
+                const lines = plainText.split('\n');
+                const nonEmpty = lines.filter(l => l.trim() !== '');
+                // Directly update DOM since useEffect won't sync a focused element
+                if (nonEmpty.length > 0 && contentEditable.current) {
+                    contentEditable.current.innerHTML = nonEmpty[0];
+                }
+                onMultiLinePaste(lines);
+            }
         },
         onFocus,
         placeholder,
@@ -126,7 +138,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     });
 });
 
-function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode }) {
+function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode, pasteMultiLine, isSelected, clearSelection }) {
     const [showCommands, setShowCommands] = useState(false);
     const [commandQuery, setCommandQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -381,8 +393,10 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             className={cn(
                 "group relative flex items-start pr-4 transition-colors mb-1",
                 !isReadOnly ? "-ml-12 pl-12" : "ml-0 pl-4",
-                dragOverIndex === index && !isReadOnly ? "border-t-2 border-blue-500 pt-1" : ""
+                dragOverIndex === index && !isReadOnly ? "border-t-2 border-blue-500 pt-1" : "",
+                isSelected ? "bg-blue-100/60 rounded-lg" : ""
             )}
+            onClick={() => { if (isSelected && clearSelection) clearSelection(); }}
             onDragOver={!isReadOnly ? onDragOver : undefined}
             onDragLeave={!isReadOnly ? onDragLeave : undefined}
             onDrop={!isReadOnly ? onDrop : undefined}
@@ -441,8 +455,9 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                 {/* Child Page Link */}
                 {block.type === 'page' ? (
                     <div
-                        className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer text-ink-black font-bold border border-transparent hover:border-gray-200 transition-colors my-1 w-fit pr-4"
+                        className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer text-ink-black font-bold border border-transparent hover:border-gray-200 focus-within:ring-2 focus-within:ring-blue-300 focus-within:rounded-lg transition-colors my-1 w-fit pr-4 outline-none"
                         onClick={() => setActivePageId(block.pageId)}
+                        tabIndex={0}
                     >
                         <span className="text-gray-400"><FileText size={18} /></span>
                         <span className="underline decoration-gray-300 underline-offset-4">{pages.find(p => p.id === block.pageId)?.title?.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
@@ -631,6 +646,9 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                     } else {
                                                         insertBlock(index, { type: 'image', content: base64 });
                                                     }
+                                                }}
+                                                onMultiLinePaste={(lines) => {
+                                                    if (pasteMultiLine) pasteMultiLine(index, block.type, lines);
                                                 }}
                                                 onFocus={() => { if (!isReadOnly) setFocus(index); }}
                                                 autoFocus={block.focused && !isReadOnly}
@@ -974,6 +992,7 @@ export default function NotionPosts() {
         setIsSaving(false);
     };
 
+    // Cmd+S save shortcut
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -989,7 +1008,37 @@ export default function NotionPosts() {
 
     const activePage = pages.find(p => p.id === activePageId);
 
-    // Auto-update title
+    // Select-all and bulk-delete
+    const [selectedBlockIds, setSelectedBlockIds] = useState(new Set());
+    const clearSelection = () => setSelectedBlockIds(new Set());
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Cmd+A: select all blocks
+            if ((e.metaKey || e.ctrlKey) && e.key === 'a' && !isReadOnly && activePage) {
+                const editorEl = document.querySelector('[data-block-index]');
+                if (editorEl) {
+                    e.preventDefault();
+                    setSelectedBlockIds(new Set(activePage.blocks.map(b => b.id)));
+                    if (document.activeElement) document.activeElement.blur();
+                }
+            }
+            // Backspace/Delete: remove all selected blocks
+            if ((e.key === 'Backspace' || e.key === 'Delete') && selectedBlockIds.size > 0 && activePage) {
+                e.preventDefault();
+                const remaining = activePage.blocks.filter(b => !selectedBlockIds.has(b.id));
+                if (remaining.length === 0) {
+                    updateBlocksForActivePage([{ id: Date.now().toString(), type: 'p', content: '', focused: true }]);
+                } else {
+                    remaining[0] = { ...remaining[0], focused: true };
+                    updateBlocksForActivePage(remaining);
+                }
+                setSelectedBlockIds(new Set());
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedBlockIds, activePage, isReadOnly]);
     useEffect(() => {
         setPages(currentPages =>
             currentPages.map(p => {
@@ -1143,6 +1192,23 @@ export default function NotionPosts() {
         const newBlocks = [...activePage.blocks];
         newBlocks.forEach(b => b.focused = false);
         newBlocks.splice(afterIndex + 1, 0, newBlock);
+        updateBlocksForActivePage(newBlocks);
+    };
+
+    const pasteMultiLine = (blockIndex, blockType, lines) => {
+        const nonEmpty = lines.filter(l => l.trim() !== '');
+        if (nonEmpty.length === 0) return;
+        const newBlocks = [...activePage.blocks];
+        // Update current block with first line
+        newBlocks[blockIndex] = { ...newBlocks[blockIndex], content: nonEmpty[0], focused: false };
+        // Create new blocks for remaining lines
+        const newBlocksToInsert = nonEmpty.slice(1).map((line, i) => ({
+            id: (Date.now() + i + 1).toString(),
+            type: blockType,
+            content: line,
+            focused: i === nonEmpty.length - 2
+        }));
+        newBlocks.splice(blockIndex + 1, 0, ...newBlocksToInsert);
         updateBlocksForActivePage(newBlocks);
     };
 
@@ -1305,13 +1371,13 @@ export default function NotionPosts() {
                                     key={block.id}
                                     block={block}
                                     index={i}
-                                    updateBlock={updateBlock}
+                                    updateBlock={(...args) => { clearSelection(); updateBlock(...args); }}
                                     addBlock={addBlock}
                                     insertBlock={insertBlock}
                                     removeBlock={removeBlock}
                                     duplicateBlock={duplicateBlock}
                                     moveBlock={moveBlock}
-                                    setFocus={setFocus}
+                                    setFocus={(...args) => { clearSelection(); setFocus(...args); }}
                                     createNewPage={createNewPage}
                                     activePageId={activePageId}
                                     pages={pages}
@@ -1319,6 +1385,9 @@ export default function NotionPosts() {
                                     dragOverIndex={dragOverIndex}
                                     setDragOverIndex={setDragOverIndex}
                                     isReadOnly={isReadOnly}
+                                    pasteMultiLine={pasteMultiLine}
+                                    isSelected={selectedBlockIds.has(block.id)}
+                                    clearSelection={clearSelection}
                                 />
                             ))}
                         </div>
