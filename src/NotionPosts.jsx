@@ -81,7 +81,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
                 contentEditable.current.innerHTML = html;
             }
         }
-    }, [html]);
+    }, [html, tagName]);
 
     const emitChange = () => {
         if (contentEditable.current && !readOnly) {
@@ -223,6 +223,31 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                 removeBlock(index);
             }
         } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            const totalBlocks = pages.find(p => p.id === activePageId)?.blocks.length || 0;
+
+            // Textarea handling (math block)
+            if (e.target.tagName === 'TEXTAREA') {
+                const val = e.target.value;
+                const cursorPos = e.target.selectionStart;
+                if (e.key === 'ArrowUp') {
+                    // If cursor is on the first line, navigate up
+                    const textBeforeCursor = val.substring(0, cursorPos);
+                    if (!textBeforeCursor.includes('\n') && index > 0) {
+                        e.preventDefault();
+                        setFocus(index - 1);
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    // If cursor is on the last line, navigate down
+                    const textAfterCursor = val.substring(cursorPos);
+                    if (!textAfterCursor.includes('\n') && index < totalBlocks - 1) {
+                        e.preventDefault();
+                        setFocus(index + 1);
+                    }
+                }
+                return;
+            }
+
+            // ContentEditable handling (text blocks)
             const selection = window.getSelection();
             if (!selection || selection.rangeCount === 0) return;
 
@@ -230,15 +255,13 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             const rect = range.getBoundingClientRect();
             const editableRect = e.target.getBoundingClientRect();
 
-            // Simple heuristic based on vertical position of caret vs container bounds
-            // Using a tolerance of roughly one line height (~20px)
             if (e.key === 'ArrowUp') {
                 if (index > 0 && (rect.top - editableRect.top < 20)) {
                     e.preventDefault();
                     setFocus(index - 1);
                 }
             } else if (e.key === 'ArrowDown') {
-                if (index < pages.find(p => p.id === activePageId)?.blocks.length - 1) {
+                if (index < totalBlocks - 1) {
                     if (editableRect.bottom - rect.bottom < 20) {
                         e.preventDefault();
                         setFocus(index + 1);
@@ -377,9 +400,36 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             )}
 
             {blockMenuOpen && (
-                <div className="absolute left-[18px] top-8 bg-white border border-gray-200 shadow-xl rounded-lg py-1 z-50 w-48 text-sm select-auto" contentEditable={false}>
-                    <button onClick={() => { removeBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2 text-red-600"><Trash size={14} /> Delete</button>
-                    <button onClick={() => { duplicateBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2 text-ink-black"><Copy size={14} /> Duplicate</button>
+                <div className="absolute left-[18px] top-8 bg-white border border-gray-200 shadow-xl rounded-xl py-1.5 z-50 w-56 text-sm select-auto animate-in fade-in slide-in-from-top-1" contentEditable={false}>
+                    <div className="px-3 py-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Turn into</div>
+                    {COMMAND_MENU_ITEMS.filter(c => !['page', 'link', 'table'].includes(c.id)).map(cmd => {
+                        const Icon = cmd.icon;
+                        const isActive = block.type === cmd.id;
+                        return (
+                            <button
+                                key={cmd.id}
+                                onClick={() => {
+                                    if (cmd.id === 'code' || cmd.id === 'math') {
+                                        updateBlock(block.id, { type: cmd.id, content: block.content.replace(/<[^>]+>/g, '') });
+                                    } else {
+                                        updateBlock(block.id, { type: cmd.id });
+                                    }
+                                    setBlockMenuOpen(false);
+                                }}
+                                className={cn(
+                                    "w-full text-left px-3 py-1.5 flex items-center gap-2.5 transition-colors",
+                                    isActive ? "bg-sky-50 text-deep-blue font-bold" : "hover:bg-gray-50 text-ink-black"
+                                )}
+                            >
+                                <Icon size={15} className={isActive ? "text-deep-blue" : "text-gray-400"} />
+                                <span className="flex-1">{cmd.label}</span>
+                                {isActive && <span className="text-deep-blue text-xs">✓</span>}
+                            </button>
+                        );
+                    })}
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button onClick={() => { duplicateBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2.5 text-ink-black"><Copy size={15} className="text-gray-400" /> Duplicate</button>
+                    <button onClick={() => { removeBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-red-50 flex items-center gap-2.5 text-red-500"><Trash size={15} /> Delete</button>
                 </div>
             )}
 
