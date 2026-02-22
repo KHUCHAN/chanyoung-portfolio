@@ -118,11 +118,53 @@ export const initialPages = [
                 "id": "1771713761626",
                 "type": "page",
                 "content": "",
-                "focused": true,
+                "focused": false,
                 "pageId": "page_1771719040755"
             },
             {
                 "id": "1771713210704",
+                "type": "math",
+                "content": "E[(Y- \\hat{Y})^2] = Var(\\hat{f(x)}) + Bias(f(x))^2 + Var(e)",
+                "focused": false
+            },
+            {
+                "id": "1771736180202",
+                "type": "bullet",
+                "content": "<u>Reducible error</u>",
+                "focused": false
+            },
+            {
+                "id": "1771736051233",
+                "type": "p",
+                "content": "<span style=\"background-color: rgb(134, 239, 172);\">Var(hat{f(x)}):</span>&nbsp;“Small changes in the training data lead to large changes in the prediction.” =&gt; over fitting",
+                "focused": false
+            },
+            {
+                "id": "1771736744520",
+                "type": "p",
+                "content": "<span style=\"background-color: rgb(253, 224, 71);\">bias^2:</span> Intuition&nbsp;<em data-start=\"1279\" data-end=\"1398\">“Even if we could train on many different datasets, the model’s average prediction would still miss the true target.” =&gt; under fitting</em>",
+                "focused": false
+            },
+            {
+                "id": "1771736200979",
+                "type": "bullet",
+                "content": "<u>Irreducible error</u>",
+                "focused": false
+            },
+            {
+                "id": "1771736210021",
+                "type": "p",
+                "content": "<span style=\"background-color: rgb(216, 180, 254);\">var(e)</span>: “Even a perfect model cannot predict the random part of the outcome.” =&gt; The act of God",
+                "focused": false
+            },
+            {
+                "id": "1771737071733",
+                "type": "p",
+                "content": "",
+                "focused": true
+            },
+            {
+                "id": "1771736178628",
                 "type": "p",
                 "content": "",
                 "focused": false
@@ -135,27 +177,6 @@ export const initialPages = [
             },
             {
                 "id": "1771711253030",
-                "type": "p",
-                "content": "",
-                "focused": false
-            }
-        ]
-    },
-    {
-        "id": "page_1771712553780",
-        "title": "Untitled",
-        "icon": "📄",
-        "cover": null,
-        "parentId": "page1",
-        "blocks": [
-            {
-                "id": "page_1771712553780_1",
-                "type": "h1",
-                "content": "",
-                "focused": true
-            },
-            {
-                "id": "page_1771712553780_2",
                 "type": "p",
                 "content": "",
                 "focused": false
@@ -221,14 +242,344 @@ export const initialPages = [
                 "id": "page_1771719040755_1",
                 "type": "h1",
                 "content": "Reducible error in regression",
-                "focused": true
+                "focused": false
             },
             {
-                "id": "page_1771719040755_2",
+                "id": "1771721921991",
                 "type": "math",
-                "content": "• Y- \\hat{Y} = f(x) + e - \\hat{f(x)}\n• (Y- \\hat{Y})^2 = (f(x) + e - \\hat{f(x)})^2\n• E[(Y- \\hat{Y})^2] = E[(f(x) + e - \\hat{f(x)})^2]\n• LET, A = f(x) + \\hat{f(x)}, B = e\n• Then, E[(A + B)^2] = E[A^2 + 2AB + B^2]\n• (1) figure out 2AB + B^2\n• (1-1) 2*AB = 2*E[AB] = 2*E[(f(x) + \\hat{f(x)})*e]\n• since A, B is independent we can divide A and B\n• = E[f(x) + \\hat{f(x)}]*E[e]\n• AND we assume E[e] is 0 \n• Conclusion: 2AB = 0\n• (1-2) 2*AB = 2*E[AB] = 2*E[(f(x) + \\hat{f(x)})*e]",
-                "focused": false,
+                "content": "Y- \\hat{Y} = f(x) + e - \\hat{f(x)}\n(Y- \\hat{Y})^2 = (f(x) + e - \\hat{f(x)})^2\nE[(Y- \\hat{Y})^2] = E[(f(x) + e - \\hat{f(x)})^2]\nLET, A = f(x) - \\hat{f(x)}, B = e\nThen, E[(A + B)^2] = E[A^2 + 2AB + B^2]\n\n(1) figure out 2AB + B^2\n(1-1) 2 \\cdot AB = 2 \\cdot E[AB] = 2 \\cdot E[(f(x) + \\hat{f(x)}) \\cdot e]\nAND we assume E[e] is 0 \n= E[f(x) + \\hat{f(x)}] \\cdot E[e]\nConclusion: 2AB = 0\n\n(1-2) E[e^2] = E(e)^2 - E(e)^2 + E[e^2]\nVar(e) = E[(e - E(e))^2] = E[e^2 -2e \\cdot E[(e)] + E(e)^2]\n= E[e^2] -2E[e \\cdot E[e]] + E[E(e)^2]\nSince E[e] is constant value\n= E[e^2] -2E[e]E[e] + E(e)^2\nconclusion: Since E[e] is 0, Var(e) = E[e^2]\n\n(2) figure out A^2\nE[A^2] = E[(f(x)-\\hat{f(x)})^2] = E[f(x)^2-2f(x) \\cdot \\hat{f(x)}+\\hat{f(x)^2}]\n\n= f(x)^2 +2 \\cdot f(x) \\cdot E[\\hat{f(x)}] + E[\\hat{f(x)}]^2\nVar(\\hat{f(x)}) = E[(\\hat{f(x)} - E[\\hat{f(x)}])^2]\n= E[\\hat{f(x)}^2 -2 \\cdot \\hat{f(x)} \\cdot E[\\hat{f(x)}] + E[\\hat{f(x)}]^2]\n= E[\\hat{f(x)}^2] -2 \\cdot E[\\hat{f(x)}] \\cdot E[E[\\hat{f(x)}]] + E[E[\\hat{f(x)}]^2]\n= E[\\hat{f(x)}^2] -2E[\\hat{f(x)}]^2 + E[\\hat{f(x)}]^2\n= E[\\hat{f(x)}^2] - E[\\hat{f(x)}]^2\n\nThen, E[A^2] = \nVar(\\hat{f(x)}) + f(x)^2 - 2 \\cdot f(x) \\cdot E[\\hat{f(x)}] + E[\\hat{f(x)}]^2\n= Var(\\hat{f(x)}) + E[(f(x) - E[\\hat{f(x)}])^2] \n= Var(\\hat{f(x)}) + Bias(f(x))^2\n\nConclusion: E[(Y- \\hat{Y})^2] = Var(\\hat{f(x)}) + Bias(f(x))^2 + Var[e]\n",
+                "focused": true,
                 "align": "left"
+            },
+            {
+                "id": "1771735356132",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735349080",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735327090",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735300873",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735298710",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735296595",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735250831",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735239566",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735175458",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735067515",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735045600",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771735035730",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734862376",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734674853",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734657349",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734647181",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734541607",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734507932",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734336123",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771734318858",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771729984949",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771729938912",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771729885798",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771729799500",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771729783076",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771726497026",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771726471931",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771726453078",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771726127931",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771725886801",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771725864119",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771725563667",
+                "type": "p",
+                "content": "<br>",
+                "focused": false
+            },
+            {
+                "id": "1771725410437",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771725396970",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724505644",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724499419",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724459162",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724435162",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724381251",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724374802",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724364063",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724340917",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724332577",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724324733",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724263115",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724250799",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771724221775",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771723553312",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771723531694",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771722008316",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771721996541",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771721986234",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771721902160",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771721898245",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771721891660",
+                "type": "p",
+                "content": "",
+                "focused": false
             },
             {
                 "id": "1771720978831",
@@ -352,6 +703,27 @@ export const initialPages = [
             },
             {
                 "id": "1771719818882",
+                "type": "p",
+                "content": "",
+                "focused": false
+            }
+        ]
+    },
+    {
+        "id": "page_1771735380995",
+        "title": "Untitled",
+        "icon": "📄",
+        "cover": null,
+        "parentId": "page1",
+        "blocks": [
+            {
+                "id": "page_1771735380995_1",
+                "type": "h1",
+                "content": "",
+                "focused": true
+            },
+            {
+                "id": "page_1771735380995_2",
                 "type": "p",
                 "content": "",
                 "focused": false

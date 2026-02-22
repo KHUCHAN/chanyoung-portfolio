@@ -594,7 +594,13 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                         // Convert user spaces to KaTeX-visible spaces (~), but NOT after backslash commands
                                                         raw = raw.replace(/(?<!\\[a-zA-Z]+) /g, '~');
                                                         if (raw.includes('\n') && !raw.includes('\\begin{')) {
-                                                            return `\\begin{gathered}\n${raw.replace(/\n/g, '\\\\')}\n\\end{gathered}`;
+                                                            const lines = raw.replace(/\n/g, '\\\\');
+                                                            if (block.align === 'left') {
+                                                                return `\\begin{array}{l}\n${lines}\n\\end{array}`;
+                                                            } else if (block.align === 'right') {
+                                                                return `\\begin{array}{r}\n${lines}\n\\end{array}`;
+                                                            }
+                                                            return `\\begin{gathered}\n${lines}\n\\end{gathered}`;
                                                         }
                                                         return raw || " ";
                                                     })()

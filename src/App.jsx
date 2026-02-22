@@ -161,6 +161,7 @@ const EXPERIENCE = [
         company: "KPMG",
         location: "Seoul, South Korea",
         date: "Jan 2023 - Dec 2025",
+        duration: "3 yrs",
         logo: "/kpmg_logo.png",
         details: [
             "Data Analysis",
@@ -175,6 +176,7 @@ const EXPERIENCE = [
         company: "Kyung Hee Univ.",
         location: "Seoul, South Korea",
         date: "Jan 2022 - Dec 2022",
+        duration: "1 yr",
         logo: "/kyunghee_logo.png",
         details: [
             "ESG Research",
@@ -186,6 +188,7 @@ const EXPERIENCE = [
         company: "ROKA",
         location: "Goseong, South Korea",
         date: "Aug 2016 - May 2018",
+        duration: "1 yr 10 mos",
         logo: "/roka_logo.png",
         details: [
             "Equipment Parts Management",
@@ -326,7 +329,14 @@ function ExperienceSection() {
                                 </div>
 
                                 <div>
-                                    <h4 className="text-xl md:text-2xl font-bold text-ink-black mb-2 leading-tight">{exp.company}</h4>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <h4 className="text-xl md:text-2xl font-bold text-ink-black leading-tight">{exp.company}</h4>
+                                        {exp.duration && (
+                                            <span className="text-[11px] font-bold text-slate-muted bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                {exp.duration}
+                                            </span>
+                                        )}
+                                    </div>
                                     <h5 className="text-md font-bold text-deep-blue mb-4">{exp.role}</h5>
 
                                     {exp.details.length > 0 && (
