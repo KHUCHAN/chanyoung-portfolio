@@ -179,7 +179,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             }
         }
 
-        if (e.key === '/') {
+        if (e.key === '/' && !['code', 'math', 'image'].includes(block.type)) {
             preSlashContentRef.current = block.content; // Save content before slash for clean restoration
             setShowCommands(true);
             setShowPageSelect(false);
@@ -563,7 +563,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                             )
                                 /* Math Equation Rendering */
                                 : block.type === 'math' ? (
-                                    <div className="my-4 w-full relative group/math">
+                                    <div className={cn("my-4 w-full relative group/math", block.align === 'left' ? "text-left" : block.align === 'right' ? "text-right" : "text-center")}>
                                         {block.focused || block.content === '' ? (
                                             <textarea
                                                 value={block.content.replace(/<[^>]+>/g, '')}
@@ -578,24 +578,36 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                     e.target.style.height = 'auto';
                                                     e.target.style.height = e.target.scrollHeight + 'px';
                                                 }}
-                                                placeholder="Enter KaTeX equation (e.g., E = mc^2) (Shift+Enter for newline)"
+                                                placeholder="Enter KaTeX equation (e.g., E = mc^2)"
                                                 className={cn("w-full resize-none overflow-hidden outline-none bg-gray-50 text-gray-600 font-mono text-sm p-4 rounded-lg border border-gray-200 min-h-[56px]")}
                                                 rows={1}
                                             />
                                         ) : (
                                             <div
-                                                className="py-4 px-8 cursor-text text-center text-lg bg-gray-50/50 rounded-lg border border-transparent hover:border-gray-200 transition-colors w-full"
+                                                className="py-4 px-8 cursor-text text-lg bg-gray-50/50 rounded-lg border border-transparent hover:border-gray-200 transition-colors w-full"
+                                                style={{ textAlign: block.align === 'left' ? 'left' : block.align === 'right' ? 'right' : 'center' }}
                                                 onClick={() => setFocus(index)}
                                             >
                                                 <BlockMath math={
                                                     (() => {
-                                                        const raw = block.content.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '').trim();
+                                                        let raw = block.content.replace(/<br>/g, '\n').replace(/<[^>]+>/g, '').trim();
+                                                        // Convert user spaces to KaTeX-visible spaces (~), but NOT after backslash commands
+                                                        raw = raw.replace(/(?<!\\[a-zA-Z]+) /g, '~');
                                                         if (raw.includes('\n') && !raw.includes('\\begin{')) {
                                                             return `\\begin{gathered}\n${raw.replace(/\n/g, '\\\\')}\n\\end{gathered}`;
                                                         }
                                                         return raw || " ";
                                                     })()
                                                 } errorColor={'#cc0000'} />
+                                            </div>
+                                        )}
+                                        {!isReadOnly && (
+                                            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/math:opacity-100 transition-opacity z-10">
+                                                <div className="flex bg-white/90 rounded shadow text-gray-500 overflow-hidden text-xs font-bold">
+                                                    <button onClick={() => updateBlock(block.id, { align: 'left' })} className={cn("px-2 py-1 hover:bg-gray-100", block.align === 'left' ? "bg-gray-200 text-ink-black" : "")} title="Align Left">L</button>
+                                                    <button onClick={() => updateBlock(block.id, { align: 'center' })} className={cn("px-2 py-1 hover:bg-gray-100 border-x border-gray-200", (!block.align || block.align === 'center') ? "bg-gray-200 text-ink-black" : "")} title="Align Center">C</button>
+                                                    <button onClick={() => updateBlock(block.id, { align: 'right' })} className={cn("px-2 py-1 hover:bg-gray-100", block.align === 'right' ? "bg-gray-200 text-ink-black" : "")} title="Align Right">R</button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

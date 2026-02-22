@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Override KaTeX's forced center alignment so our L/C/R controls work */
+.katex-display,
+.katex-display>.katex {
+  text-align: inherit !important;
+}
+
 @layer utilities {
   .fade-up {
     animation: fadeUp 0.65s ease both;
@@ -13,6 +19,7 @@
     transform: translateY(26px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;

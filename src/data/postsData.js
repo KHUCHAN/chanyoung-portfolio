@@ -116,9 +116,10 @@ export const initialPages = [
             },
             {
                 "id": "1771713761626",
-                "type": "p",
+                "type": "page",
                 "content": "",
-                "focused": true
+                "focused": true,
+                "pageId": "page_1771719040755"
             },
             {
                 "id": "1771713210704",
@@ -203,6 +204,154 @@ export const initialPages = [
             },
             {
                 "id": "page_1771713271956_2",
+                "type": "p",
+                "content": "",
+                "focused": false
+            }
+        ]
+    },
+    {
+        "id": "page_1771719040755",
+        "title": "Reducible error in regression",
+        "icon": "📊",
+        "cover": null,
+        "parentId": "page1",
+        "blocks": [
+            {
+                "id": "page_1771719040755_1",
+                "type": "h1",
+                "content": "Reducible error in regression",
+                "focused": true
+            },
+            {
+                "id": "page_1771719040755_2",
+                "type": "math",
+                "content": "• Y- \\hat{Y} = f(x) + e - \\hat{f(x)}\n• (Y- \\hat{Y})^2 = (f(x) + e - \\hat{f(x)})^2\n• E[(Y- \\hat{Y})^2] = E[(f(x) + e - \\hat{f(x)})^2]\n• LET, A = f(x) + \\hat{f(x)}, B = e\n• Then, E[(A + B)^2] = E[A^2 + 2AB + B^2]\n• (1) figure out 2AB + B^2\n• (1-1) 2*AB = 2*E[AB] = 2*E[(f(x) + \\hat{f(x)})*e]\n• since A, B is independent we can divide A and B\n• = E[f(x) + \\hat{f(x)}]*E[e]\n• AND we assume E[e] is 0 \n• Conclusion: 2AB = 0\n• (1-2) 2*AB = 2*E[AB] = 2*E[(f(x) + \\hat{f(x)})*e]",
+                "focused": false,
+                "align": "left"
+            },
+            {
+                "id": "1771720978831",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720731095",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720714145",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720659389",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720619079",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720614923",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720604288",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720492525",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720367683",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720336740",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720332912",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720325982",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720165096",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720107500",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771720081097",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719972738",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719913725",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719908476",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719834812",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719831003",
+                "type": "p",
+                "content": "",
+                "focused": false
+            },
+            {
+                "id": "1771719818882",
                 "type": "p",
                 "content": "",
                 "focused": false
