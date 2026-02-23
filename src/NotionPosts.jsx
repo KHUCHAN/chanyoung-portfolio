@@ -1250,20 +1250,25 @@ export default function NotionPosts() {
     const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
     const isSaving = saveStatus === 'saving';
 
-    const handleSaveData = async () => {
+    const handleSaveData = useCallback(async () => {
         if (!isAdmin) return;
         setSaveStatus('saving');
+        const saveToLocal = (data) => {
+            try { localStorage.setItem('portfolio-notion-posts', JSON.stringify(data)); }
+            catch (e) { console.warn('localStorage full, skipping local cache', e); }
+        };
         try {
             await savePagesToFirestore(pages);
-            localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
+            saveToLocal(pages);
             setSaveStatus('saved');
             setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {
             console.error('Save error:', error);
-            localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
-            setSaveStatus('idle');
+            saveToLocal(pages);
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus('idle'), 2000);
         }
-    };
+    }, [isAdmin, pages]);
 
     // Auto-save effect
     useEffect(() => {
@@ -1272,7 +1277,7 @@ export default function NotionPosts() {
             handleSaveData();
         }, 3000);
         return () => clearTimeout(timer);
-    }, [pages]);
+    }, [pages, handleSaveData, isReadOnly]);
 
     // Cmd+S save shortcut
     useEffect(() => {
@@ -1284,7 +1289,7 @@ export default function NotionPosts() {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [pages]);
+    }, [handleSaveData]);
 
     const [activePageId, setActivePageId] = useState(pages[0].id);
 
@@ -1298,7 +1303,8 @@ export default function NotionPosts() {
                 if (firestorePages && firestorePages.length > 0) {
                     setPages(firestorePages);
                     setActivePageId(firestorePages[0].id);
-                    localStorage.setItem('portfolio-notion-posts', JSON.stringify(firestorePages));
+                    try { localStorage.setItem('portfolio-notion-posts', JSON.stringify(firestorePages)); }
+                    catch (e) { console.warn('localStorage full, skipping local cache', e); }
                 }
             } catch (e) {
                 console.warn('Firestore load failed, using local data', e);
@@ -1719,9 +1725,9 @@ export default function NotionPosts() {
                     </div>
                     <div className="flex items-center gap-2">
                         {isAdmin && (
-                            <button onClick={handleSaveData} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm disabled:opacity-50">
+                            <button onClick={handleSaveData} disabled={isSaving} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border shadow-sm disabled:opacity-50 ${saveStatus === 'error' ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100' : 'bg-sky-50 text-deep-blue border-sky-100 hover:bg-sky-100'}`}>
                                 <Save size={14} />
-                                <span>{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}</span>
+                                <span>{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error!' : 'Save'}</span>
                             </button>
                         )}
                         {!authLoading && (
