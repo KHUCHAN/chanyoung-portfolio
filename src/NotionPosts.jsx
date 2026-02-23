@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Home, ChevronRight, Search, Plus, Settings, Type,
     Heading1, Heading2, Heading3, List, Code as CodeIcon, FunctionSquare,
-    GripVertical, Bold, Italic, Palette, Type as FontIcon, FilePlus, ChevronDown, Copy, Trash, FileText, Download, Save, Lock, Table, Link2
+    GripVertical, Bold, Italic, Palette, Type as FontIcon, FilePlus, ChevronDown, Copy, Trash, FileText, Download, Save, Lock, Table, Link2,
+    ListOrdered, Minus, Quote, AlertCircle, CheckSquare, Strikethrough, Underline
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -34,6 +35,11 @@ const COMMAND_MENU_ITEMS = [
     { id: 'h2', label: 'Heading 2', description: 'Medium section heading.', icon: Heading2 },
     { id: 'h3', label: 'Heading 3', description: 'Small section heading.', icon: Heading3 },
     { id: 'bullet', label: 'Bulleted list', description: 'Simple bulleted list.', icon: List },
+    { id: 'numbered', label: 'Numbered list', description: 'Ordered list.', icon: ListOrdered },
+    { id: 'todo', label: 'To-do', description: 'Checkbox task list.', icon: CheckSquare },
+    { id: 'quote', label: 'Quote', description: 'Blockquote.', icon: Quote },
+    { id: 'callout', label: 'Callout', description: 'Highlighted callout box.', icon: AlertCircle },
+    { id: 'divider', label: 'Divider', description: 'Horizontal line.', icon: Minus },
     { id: 'code', label: 'Code', description: 'Syntax highlighted code.', icon: CodeIcon },
     { id: 'math', label: 'Math Equation', description: 'KaTeX block equation.', icon: FunctionSquare },
     { id: 'table', label: 'Table', description: 'Simple grid.', icon: Table },
@@ -139,7 +145,7 @@ const EditableBlock = React.memo(({ html, tagName, className, onChange, onKeyDow
     });
 });
 
-function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode, pasteMultiLine, isSelected, clearSelection, updateBlocksForActivePage }) {
+function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, setFocus, createNewPage, activePageId, pages, setActivePageId, moveBlock, duplicateBlock, dragOverIndex, setDragOverIndex, isReadOnly, isSelectingText, enableSelectionMode, pasteMultiLine, isSelected, clearSelection, updateBlocksForActivePage, focusPrevious, focusNext, selectedBlockIds }) {
     const [showCommands, setShowCommands] = useState(false);
     const [commandQuery, setCommandQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -182,12 +188,28 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
     const handleKeyDown = (e) => {
         if (isReadOnly) return;
 
-        // Markdown shortcut: "- " converts to bullet
+        // Markdown shortcuts on Space key — read actual DOM content (React state may lag)
         if (e.key === ' ' && block.type === 'p') {
-            const raw = block.content.replace(/<[^>]+>/g, '').replace(/\u00a0/g, ' ').trim();
+            const domText = e.target?.textContent ?? '';
+            const raw = (domText || block.content.replace(/<[^>]+>/g, '')).replace(/\u00a0/g, ' ').trim();
             if (raw === '-') {
                 e.preventDefault();
                 updateBlock(block.id, { type: 'bullet', content: '' });
+                return;
+            }
+            if (raw === '1.' || raw === '1)') {
+                e.preventDefault();
+                updateBlock(block.id, { type: 'numbered', content: '' });
+                return;
+            }
+            if (raw === '[]' || raw === '[ ]') {
+                e.preventDefault();
+                updateBlock(block.id, { type: 'todo', content: '', checked: false });
+                return;
+            }
+            if (raw === '>') {
+                e.preventDefault();
+                updateBlock(block.id, { type: 'quote', content: '' });
                 return;
             }
         }
@@ -223,17 +245,33 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             }
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            addBlock(index);
+            addBlock(block.id);
         } else if (e.key === 'Enter' && !e.shiftKey) {
-            if (block.type === 'code' || block.type === 'math') return;
+            if (block.type === 'code') return;
             e.preventDefault();
-            addBlock(index);
+            const isEmpty = block.content === '' || block.content === '<br>';
+            // Empty list/quote/callout → convert to plain paragraph
+            if (isEmpty && ['bullet', 'numbered', 'todo', 'quote', 'callout'].includes(block.type)) {
+                updateBlock(block.id, { type: 'p', content: '' });
+            } else if (['bullet', 'numbered', 'todo'].includes(block.type)) {
+                // Continuation: new block of the same list type
+                addBlock(block.id, { type: block.type, content: '', checked: false });
+            } else {
+                addBlock(block.id);
+            }
         } else if (e.key === 'Backspace' && (block.content === '' || block.content === '<br>')) {
             e.preventDefault();
             if (block.type !== 'p') {
                 updateBlock(block.id, { type: 'p' });
             } else {
-                removeBlock(index);
+                removeBlock(block.id, false); // focus previous
+            }
+        } else if (e.key === 'Delete' && (block.content === '' || block.content === '<br>')) {
+            e.preventDefault();
+            if (block.type !== 'p') {
+                updateBlock(block.id, { type: 'p' });
+            } else {
+                removeBlock(block.id, true); // focus next
             }
         } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             const totalBlocks = pages.find(p => p.id === activePageId)?.blocks.length || 0;
@@ -247,14 +285,14 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                     const textBeforeCursor = val.substring(0, cursorPos);
                     if (!textBeforeCursor.includes('\n') && index > 0) {
                         e.preventDefault();
-                        setFocus(index - 1);
+                        focusPrevious();
                     }
                 } else if (e.key === 'ArrowDown') {
                     // If cursor is on the last line, navigate down
                     const textAfterCursor = val.substring(cursorPos);
                     if (!textAfterCursor.includes('\n') && index < totalBlocks - 1) {
                         e.preventDefault();
-                        setFocus(index + 1);
+                        focusNext();
                     }
                 }
                 return;
@@ -268,16 +306,19 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             const rect = range.getBoundingClientRect();
             const editableRect = e.target.getBoundingClientRect();
 
+            // Empty/new blocks return a zero rect — treat as cursor at block edge
+            const isZeroRect = rect.top === 0 && rect.bottom === 0;
+
             if (e.key === 'ArrowUp') {
-                if (index > 0 && (rect.top - editableRect.top < 20)) {
+                if (index > 0 && (isZeroRect || rect.top - editableRect.top < 20)) {
                     e.preventDefault();
-                    setFocus(index - 1);
+                    focusPrevious();
                 }
             } else if (e.key === 'ArrowDown') {
                 if (index < totalBlocks - 1) {
-                    if (editableRect.bottom - rect.bottom < 20) {
+                    if (isZeroRect || editableRect.bottom - rect.bottom < 20) {
                         e.preventDefault();
-                        setFocus(index + 1);
+                        focusNext();
                     }
                 }
             }
@@ -329,6 +370,10 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
             case 'h2': return 'text-2xl font-bold mt-6 mb-3 tracking-tight text-ink-black';
             case 'h3': return 'text-xl font-bold mt-4 mb-2 tracking-tight text-ink-black';
             case 'bullet': return 'list-none text-ink-black';
+            case 'numbered': return 'list-none text-ink-black';
+            case 'todo': return 'list-none text-ink-black';
+            case 'quote': return 'text-base italic text-gray-600 leading-relaxed';
+            case 'callout': return 'text-base text-ink-black leading-relaxed';
             default: return 'text-base my-1 text-ink-black font-medium leading-relaxed';
         }
     };
@@ -362,7 +407,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
     // Handle arrow key navigation at the block wrapper level (for non-editable blocks like image, page, rendered math)
     const handleBlockKeyDown = (e) => {
         if (isReadOnly) return;
-        const nonEditableTypes = ['image', 'page'];
+        const nonEditableTypes = ['image', 'page', 'divider'];
         const isRenderedMath = block.type === 'math' && !block.focused && block.content !== '';
         const isNonEditable = nonEditableTypes.includes(block.type) || isRenderedMath;
 
@@ -372,23 +417,26 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
 
         if (e.key === 'ArrowUp' && index > 0) {
             e.preventDefault();
-            setFocus(index - 1);
+            focusPrevious();
         } else if (e.key === 'ArrowDown' && index < totalBlocks - 1) {
             e.preventDefault();
-            setFocus(index + 1);
+            focusNext();
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            addBlock(index);
+            addBlock(block.id);
         } else if (e.key === 'Backspace') {
             e.preventDefault();
-            removeBlock(index);
+            removeBlock(block.id, false);
+        } else if (e.key === 'Delete') {
+            e.preventDefault();
+            removeBlock(block.id, true);
         }
     };
 
     return (
         <div
             tabIndex={-1}
-            data-block-index={index}
+            data-block-id={block.id}
             style={{ outline: 'none' }}
             onKeyDown={handleBlockKeyDown}
             className={cn(
@@ -443,8 +491,8 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                         );
                     })}
                     <div className="border-t border-gray-100 my-1"></div>
-                    <button onClick={() => { duplicateBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2.5 text-ink-black"><Copy size={15} className="text-gray-400" /> Duplicate</button>
-                    <button onClick={() => { removeBlock(index); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-red-50 flex items-center gap-2.5 text-red-500"><Trash size={15} /> Delete</button>
+                    <button onClick={() => { duplicateBlock(block.id); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2.5 text-ink-black"><Copy size={15} className="text-gray-400" /> Duplicate</button>
+                    <button onClick={() => { removeBlock(block.id); setBlockMenuOpen(false); }} className="w-full text-left px-3 py-1.5 hover:bg-red-50 flex items-center gap-2.5 text-red-500"><Trash size={15} /> Delete</button>
                 </div>
             )}
 
@@ -452,9 +500,80 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                 {block.type === 'bullet' && (
                     <div className="w-1.5 h-1.5 rounded-full bg-ink-black shrink-0 mt-[0.65em] mr-4 ml-2" />
                 )}
+                {block.type === 'numbered' && (
+                    <div className="shrink-0 mt-[0.1em] mr-3 ml-1 text-base font-medium text-ink-black select-none min-w-[1.2em] text-right" contentEditable={false}>
+                        {index + 1}.
+                    </div>
+                )}
+                {block.type === 'todo' && (
+                    <div className="shrink-0 mt-[0.2em] mr-3 ml-1" contentEditable={false}>
+                        <input
+                            type="checkbox"
+                            checked={!!block.checked}
+                            onChange={() => !isReadOnly && updateBlock(block.id, { checked: !block.checked })}
+                            className="w-4 h-4 rounded border-gray-400 accent-deep-blue cursor-pointer"
+                            readOnly={isReadOnly}
+                        />
+                    </div>
+                )}
 
-                {/* Child Page Link */}
-                {block.type === 'page' ? (
+                {/* Divider Block */}
+                {block.type === 'divider' ? (
+                    <div className="w-full py-3" tabIndex={0} onFocus={() => { if (!isReadOnly) setFocus(block.id); }}>
+                        <hr className="border-t-2 border-gray-200 w-full" />
+                    </div>
+                )
+                /* Quote Block */
+                : block.type === 'quote' ? (
+                    <div className="w-full flex items-stretch my-1">
+                        <div className="w-1 rounded-full bg-gray-400 shrink-0 mr-4" contentEditable={false} />
+                        <div className="flex-1">
+                            <EditableBlock
+                                html={block.content}
+                                onChange={handleChange}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => { if (!isReadOnly) setFocus(block.id); }}
+                                autoFocus={block.focused && !isReadOnly}
+                                placeholder={!isReadOnly ? 'Quote…' : ''}
+                                className={getBlockStyle()}
+                                tagName="div"
+                                readOnly={isReadOnly}
+                            />
+                        </div>
+                    </div>
+                )
+                /* Callout Block */
+                : block.type === 'callout' ? (
+                    <div className="w-full flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 my-1">
+                        <div
+                            className="shrink-0 text-xl cursor-pointer select-none"
+                            contentEditable={false}
+                            title="Click to change emoji"
+                            onClick={() => {
+                                if (isReadOnly) return;
+                                const emoji = window.prompt('Enter an emoji for the callout:', block.icon || '💡');
+                                if (emoji !== null) updateBlock(block.id, { icon: emoji });
+                            }}
+                        >
+                            {block.icon || '💡'}
+                        </div>
+                        <div className="flex-1">
+                            <EditableBlock
+                                html={block.content}
+                                onChange={handleChange}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => { if (!isReadOnly) setFocus(block.id); }}
+                                autoFocus={block.focused && !isReadOnly}
+                                placeholder={!isReadOnly ? 'Callout text…' : ''}
+                                className={getBlockStyle()}
+                                tagName="div"
+                                readOnly={isReadOnly}
+                            />
+                        </div>
+                    </div>
+                )
+                /* Child Page Link */
+                : block.type === 'page' ? (
                     <div
                         className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 cursor-pointer text-ink-black font-bold border border-transparent hover:border-gray-200 focus-within:ring-2 focus-within:ring-blue-300 focus-within:rounded-lg transition-colors my-1 w-fit pr-4 outline-none"
                         onClick={() => setActivePageId(block.pageId)}
@@ -566,7 +685,26 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                     <Editor
                                         value={block.content.replace(/<[^>]+>/g, '')}
                                         onValueChange={code => updateBlock(block.id, { content: code })}
-                                        onFocus={() => setFocus(index)}
+                                        onFocus={() => setFocus(block.id)}
+                                        onKeyDown={(e) => {
+                                            const textarea = e.target;
+                                            const val = textarea.value || '';
+                                            const cursorPos = textarea.selectionStart;
+                                            const totalBlocks = pages.find(p => p.id === activePageId)?.blocks.length || 0;
+                                            if (e.key === 'ArrowUp') {
+                                                const textBeforeCursor = val.substring(0, cursorPos);
+                                                if (!textBeforeCursor.includes('\n') && index > 0) {
+                                                    e.preventDefault();
+                                                    focusPrevious();
+                                                }
+                                            } else if (e.key === 'ArrowDown') {
+                                                const textAfterCursor = val.substring(cursorPos);
+                                                if (!textAfterCursor.includes('\n') && index < totalBlocks - 1) {
+                                                    e.preventDefault();
+                                                    focusNext();
+                                                }
+                                            }
+                                        }}
                                         highlight={code => Prism.highlight(code, Prism.languages[codeLanguage] || Prism.languages.javascript, codeLanguage)}
                                         className="font-mono text-sm w-full min-h-[100px] text-white p-6 outline-none"
                                         style={{ fontFamily: '"Fira Code", "JetBrains Mono", monospace' }}
@@ -583,7 +721,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                 onChange={(e) => updateBlock(block.id, { content: e.target.value })}
                                                 onKeyDown={handleKeyDown}
                                                 onFocus={(e) => {
-                                                    setFocus(index);
+                                                    setFocus(block.id);
                                                     e.target.style.height = 'auto';
                                                     e.target.style.height = e.target.scrollHeight + 'px';
                                                 }}
@@ -599,7 +737,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                             <div
                                                 className="py-4 px-8 cursor-text text-lg bg-gray-50/50 rounded-lg border border-transparent hover:border-gray-200 transition-colors w-full"
                                                 style={{ textAlign: block.align === 'left' ? 'left' : block.align === 'right' ? 'right' : 'center' }}
-                                                onClick={() => setFocus(index)}
+                                                onClick={() => setFocus(block.id)}
                                             >
                                                 <BlockMath math={
                                                     (() => {
@@ -648,7 +786,7 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                         html={block.content}
                                                         onChange={handleChange}
                                                         onKeyDown={handleKeyDown}
-                                                        onFocus={() => { if (!isReadOnly) setFocus(index); }}
+                                                        onFocus={() => { if (!isReadOnly) setFocus(block.id); }}
                                                         autoFocus={block.focused && !isReadOnly}
                                                         placeholder={!isReadOnly ? 'Toggle heading' : ''}
                                                         className="text-base font-medium text-ink-black leading-relaxed"
@@ -692,58 +830,38 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                     }}
                                                 >
                                                     {(block.children && block.children.length > 0) ? (
-                                                        block.children.map((child, ci) => (
-                                                            <div key={child.id} className="group/child flex items-start gap-2 py-1 relative">
-                                                                {!isReadOnly && (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            // Move child back out as a regular block below toggle
-                                                                            const allBlocks = pages.find(p => p.id === activePageId)?.blocks;
-                                                                            if (!allBlocks) return;
-                                                                            const newChildren = block.children.filter((_, i) => i !== ci);
-                                                                            const toggleIdx = allBlocks.findIndex(b => b.id === block.id);
-                                                                            const newBlocks = allBlocks.map(b => {
-                                                                                if (b.id === block.id) return { ...b, children: newChildren };
-                                                                                return b;
-                                                                            });
-                                                                            newBlocks.splice(toggleIdx + 1, 0, { ...child, focused: true });
-                                                                            updateBlocksForActivePage(newBlocks);
-                                                                        }}
-                                                                        className="opacity-0 group-hover/child:opacity-100 shrink-0 text-gray-400 hover:text-red-500 transition-all p-0.5 rounded hover:bg-gray-100 mt-0.5"
-                                                                        title="Move out of toggle"
-                                                                    >
-                                                                        <ChevronRight size={12} className="rotate-180" />
-                                                                    </button>
-                                                                )}
-                                                                <div className="flex-1 min-w-0">
-                                                                    {child.type === 'image' ? (
-                                                                        <img src={child.content} alt="" className="max-w-full rounded-lg max-h-48 object-contain" />
-                                                                    ) : child.type === 'math' ? (
-                                                                        <div className="overflow-x-auto py-1">
-                                                                            <BlockMath math={child.content || '\\text{empty}'} />
-                                                                        </div>
-                                                                    ) : child.type === 'code' ? (
-                                                                        <pre className="bg-gray-50 rounded-lg p-3 text-sm font-mono overflow-x-auto border">
-                                                                            <code>{child.content}</code>
-                                                                        </pre>
-                                                                    ) : (
-                                                                        <div
-                                                                            className={cn(
-                                                                                "text-ink-black",
-                                                                                child.type === 'h1' ? 'text-2xl font-bold' :
-                                                                                    child.type === 'h2' ? 'text-xl font-bold' :
-                                                                                        child.type === 'h3' ? 'text-lg font-bold' :
-                                                                                            child.type === 'bullet' ? 'flex items-start gap-2' :
-                                                                                                'text-base'
-                                                                            )}
-                                                                        >
-                                                                            {child.type === 'bullet' && <span className="mt-[0.55em] w-1.5 h-1.5 rounded-full bg-ink-black shrink-0" />}
-                                                                            <span dangerouslySetInnerHTML={{ __html: child.content || '' }} />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))
+                                                        <div className="flex flex-col">
+                                                            {block.children.map((child, ci) => (
+                                                                <Block
+                                                                    key={child.id}
+                                                                    block={child}
+                                                                    index={ci}
+                                                                    updateBlock={(...args) => { clearSelection(); updateBlock(...args); }}
+                                                                    addBlock={addBlock}
+                                                                    insertBlock={insertBlock}
+                                                                    removeBlock={removeBlock}
+                                                                    duplicateBlock={duplicateBlock}
+                                                                    moveBlock={moveBlock}
+                                                                    setFocus={(...args) => { clearSelection(); setFocus(...args); }}
+                                                                    createNewPage={createNewPage}
+                                                                    activePageId={activePageId}
+                                                                    pages={pages}
+                                                                    setActivePageId={setActivePageId}
+                                                                    dragOverIndex={dragOverIndex}
+                                                                    setDragOverIndex={setDragOverIndex}
+                                                                    isReadOnly={isReadOnly}
+                                                                    isSelectingText={isSelectingText}
+                                                                    enableSelectionMode={enableSelectionMode}
+                                                                    pasteMultiLine={pasteMultiLine}
+                                                                    isSelected={selectedBlockIds.has(child.id)}
+                                                                    clearSelection={clearSelection}
+                                                                    updateBlocksForActivePage={updateBlocksForActivePage}
+                                                                    focusPrevious={() => { if (ci > 0) setFocus(block.children[ci - 1].id); }}
+                                                                    focusNext={() => { if (ci < block.children.length - 1) setFocus(block.children[ci + 1].id); }}
+                                                                    selectedBlockIds={selectedBlockIds}
+                                                                />
+                                                            ))}
+                                                        </div>
                                                     ) : (
                                                         <div
                                                             className="text-gray-300 text-sm py-1 cursor-text"
@@ -756,6 +874,25 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                                         children: [{ id: Date.now().toString(), type: 'p', content: text, focused: false }]
                                                                     });
                                                                     e.currentTarget.textContent = '';
+                                                                }
+                                                            }}
+                                                            onPaste={(e) => {
+                                                                if (isReadOnly) return;
+                                                                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                                                                for (let i = 0; i < items.length; i++) {
+                                                                    if (items[i].type.indexOf('image') !== -1) {
+                                                                        e.preventDefault();
+                                                                        const blob = items[i].getAsFile();
+                                                                        const reader = new FileReader();
+                                                                        reader.onload = (event) => {
+                                                                            const base64 = event.target.result;
+                                                                            updateBlock(block.id, {
+                                                                                children: [{ id: Date.now().toString(), type: 'image', content: base64, focused: false }],
+                                                                                toggled: true
+                                                                            });
+                                                                        };
+                                                                        reader.readAsDataURL(blob);
+                                                                    }
                                                                 }
                                                             }}
                                                             data-placeholder="Drag blocks here or type..."
@@ -777,13 +914,13 @@ function Block({ block, index, updateBlock, addBlock, insertBlock, removeBlock, 
                                                         if (block.content.trim() === '' || block.content === '<br>') {
                                                             updateBlock(block.id, { type: 'image', content: base64 });
                                                         } else {
-                                                            insertBlock(index, { type: 'image', content: base64 });
+                                                            insertBlock(block.id, { type: 'image', content: base64 });
                                                         }
                                                     }}
                                                     onMultiLinePaste={(lines) => {
-                                                        if (pasteMultiLine) pasteMultiLine(index, block.type, lines);
+                                                        if (pasteMultiLine) pasteMultiLine(block.id, block.type, lines);
                                                     }}
-                                                    onFocus={() => { if (!isReadOnly) setFocus(index); }}
+                                                    onFocus={() => { if (!isReadOnly) setFocus(block.id); }}
                                                     autoFocus={block.focused && !isReadOnly}
                                                     placeholder={block.type === 'p' && !isReadOnly ? (block.content === '' && block.focused ? "Type '/' for commands" : "") : (block.type === 'h1' ? 'Heading 1' : '')}
                                                     className={getBlockStyle()}
@@ -932,8 +1069,10 @@ function FormattingToolbar() {
                 if (!e.target.closest('button')) e.preventDefault();
             }}
         >
-            <button onMouseDown={(e) => { e.preventDefault(); format('bold'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors"><Bold size={16} /></button>
-            <button onMouseDown={(e) => { e.preventDefault(); format('italic'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors"><Italic size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); format('bold'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors" title="Bold"><Bold size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); format('italic'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors" title="Italic"><Italic size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); format('underline'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors" title="Underline"><Underline size={16} /></button>
+            <button onMouseDown={(e) => { e.preventDefault(); format('strikeThrough'); }} className="p-1.5 text-white hover:bg-gray-700 rounded transition-colors" title="Strikethrough"><Strikethrough size={16} /></button>
 
             <div className="h-4 w-px bg-gray-700 mx-1"></div>
 
@@ -1096,7 +1235,13 @@ export default function NotionPosts() {
     const [dragOverIndex, setDragOverIndex] = useState(null);
     const [pageToDelete, setPageToDelete] = useState(null);
 
-    const [pages, setPages] = useState(initialPages);
+    const [pages, setPages] = useState(() => {
+        const backup = localStorage.getItem('portfolio-notion-posts');
+        if (backup) {
+            try { return JSON.parse(backup); } catch (e) { return initialPages; }
+        }
+        return initialPages;
+    });
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSaveData = async () => {
@@ -1114,16 +1259,26 @@ export default function NotionPosts() {
                     btn.innerText = "Saved!";
                     setTimeout(() => { if (btn) btn.innerText = "Save"; }, 2000);
                 }
+                localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
             } else {
-                alert("Failed to save posts");
+                console.warn("Server save failed, using local storage");
+                localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
             }
         } catch (error) {
             console.error('Save error:', error);
-            alert("Local storage fallback enabled for development");
             localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
         }
         setIsSaving(false);
     };
+
+    // Auto-save effect
+    useEffect(() => {
+        if (isReadOnly) return;
+        const timer = setTimeout(() => {
+            handleSaveData();
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [pages]);
 
     // Cmd+S save shortcut
     useEffect(() => {
@@ -1305,64 +1460,154 @@ export default function NotionPosts() {
     };
 
     const updateBlocksForActivePage = (newBlocks) => {
-        setPages(pages.map(p => p.id === activePageId ? { ...p, blocks: newBlocks } : p));
+        setPages(prev => prev.map(p => p.id === activePageId ? { ...p, blocks: newBlocks } : p));
     };
 
     const updateBlock = (id, newProps) => {
-        updateBlocksForActivePage(activePage.blocks.map(b => b.id === id ? { ...b, ...newProps } : b));
+        setPages(prev => {
+            const updateRecursive = (blocks) => {
+                return blocks.map(b => {
+                    if (b.id === id) return { ...b, ...newProps };
+                    if (b.children && b.children.length > 0) {
+                        return { ...b, children: updateRecursive(b.children) };
+                    }
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: updateRecursive(p.blocks) } : p);
+        });
     };
 
-    const addBlock = (afterIndex) => {
-        const newBlock = { id: Date.now().toString(), type: 'p', content: '', focused: true };
-        const newBlocks = [...activePage.blocks];
-        newBlocks.forEach(b => b.focused = false);
-        newBlocks.splice(afterIndex + 1, 0, newBlock);
-        updateBlocksForActivePage(newBlocks);
+    const addBlock = (afterId, extraProps = {}) => {
+        const newBlock = { id: Date.now().toString(), type: 'p', content: '', focused: true, ...extraProps };
+        setPages(prev => {
+            const insertRecursive = (blocks) => {
+                const idx = blocks.findIndex(b => b.id === afterId);
+                if (idx !== -1) {
+                    const newBlocks = blocks.map(b => ({ ...b, focused: false }));
+                    newBlocks.splice(idx + 1, 0, newBlock);
+                    return newBlocks;
+                }
+                return blocks.map(b => {
+                    if (b.children) return { ...b, children: insertRecursive(b.children) };
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: insertRecursive(p.blocks) } : p);
+        });
     };
 
-    const insertBlock = (afterIndex, newBlockData) => {
+    const insertBlock = (afterId, newBlockData) => {
         const newBlock = { id: Date.now().toString(), type: 'p', content: '', focused: false, ...newBlockData };
-        const newBlocks = [...activePage.blocks];
-        newBlocks.forEach(b => b.focused = false);
-        newBlocks.splice(afterIndex + 1, 0, newBlock);
-        updateBlocksForActivePage(newBlocks);
+        setPages(prev => {
+            const insertRecursive = (blocks) => {
+                const idx = blocks.findIndex(b => b.id === afterId);
+                if (idx !== -1) {
+                    const newBlocks = blocks.map(b => ({ ...b, focused: false }));
+                    newBlocks.splice(idx + 1, 0, newBlock);
+                    return newBlocks;
+                }
+                return blocks.map(b => {
+                    if (b.children) return { ...b, children: insertRecursive(b.children) };
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: insertRecursive(p.blocks) } : p);
+        });
     };
 
-    const pasteMultiLine = (blockIndex, blockType, lines) => {
+    const pasteMultiLine = (blockId, blockType, lines) => {
         const nonEmpty = lines.filter(l => l.trim() !== '');
         if (nonEmpty.length === 0) return;
-        const newBlocks = [...activePage.blocks];
-        // Update current block with first line
-        newBlocks[blockIndex] = { ...newBlocks[blockIndex], content: nonEmpty[0], focused: false };
-        // Create new blocks for remaining lines
-        const newBlocksToInsert = nonEmpty.slice(1).map((line, i) => ({
-            id: (Date.now() + i + 1).toString(),
-            type: blockType,
-            content: line,
-            focused: i === nonEmpty.length - 2
-        }));
-        newBlocks.splice(blockIndex + 1, 0, ...newBlocksToInsert);
-        updateBlocksForActivePage(newBlocks);
+
+        setPages(prev => {
+            const updateRecursive = (blocks) => {
+                const idx = blocks.findIndex(b => b.id === blockId);
+                if (idx !== -1) {
+                    const newBlocks = [...blocks];
+                    const isSingleLine = nonEmpty.length === 1;
+                    newBlocks[idx] = { ...newBlocks[idx], content: nonEmpty[0], focused: isSingleLine };
+                    const extraBlocks = nonEmpty.slice(1).map((line, i) => ({
+                        id: (Date.now() + i + 1).toString(),
+                        type: blockType,
+                        content: line,
+                        focused: i === nonEmpty.length - 2
+                    }));
+                    newBlocks.splice(idx + 1, 0, ...extraBlocks);
+                    return newBlocks;
+                }
+                return blocks.map(b => {
+                    if (b.children) return { ...b, children: updateRecursive(b.children) };
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: updateRecursive(p.blocks) } : p);
+        });
     };
 
-    const removeBlock = (index) => {
-        if (activePage.blocks.length > 1) {
-            const newBlocks = [...activePage.blocks];
-            newBlocks.splice(index, 1);
-            if (index > 0) {
-                newBlocks[index - 1].focused = true;
-            } else {
-                newBlocks[0].focused = true;
-            }
-            updateBlocksForActivePage(newBlocks);
+    const removeBlock = (id, focusForward = false) => {
+        // Determine target focus block ID before async state update
+        const allBlocks = pages.find(p => p.id === activePageId)?.blocks || [];
+        const idx = allBlocks.findIndex(b => b.id === id);
+        let focusTargetId = null;
+        if (allBlocks.length > 1) {
+            const focusIdx = focusForward
+                ? (idx < allBlocks.length - 1 ? idx + 1 : idx - 1)
+                : (idx > 0 ? idx - 1 : 1);
+            focusTargetId = allBlocks[focusIdx]?.id || null;
+        }
+
+        setPages(prev => {
+            const removeRecursive = (blocks) => {
+                const i = blocks.findIndex(b => b.id === id);
+                if (i !== -1) {
+                    if (blocks.length === 1 && prev.find(p => p.id === activePageId)?.blocks === blocks) return blocks;
+                    const newBlocks = blocks.filter(b => b.id !== id);
+                    if (newBlocks.length > 0 && focusTargetId) {
+                        const fi = newBlocks.findIndex(b => b.id === focusTargetId);
+                        if (fi !== -1) newBlocks[fi] = { ...newBlocks[fi], focused: true };
+                        else newBlocks[0] = { ...newBlocks[0], focused: true };
+                    }
+                    return newBlocks;
+                }
+                return blocks.map(b => {
+                    if (b.children) return { ...b, children: removeRecursive(b.children) };
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: removeRecursive(p.blocks) } : p);
+        });
+
+        // DOM-focus the target block (handles code/math blocks that don't use autoFocus)
+        if (focusTargetId) {
+            setTimeout(() => {
+                const el = document.querySelector(`[data-block-id="${focusTargetId}"]`);
+                if (el) {
+                    const editable = el.querySelector('[contenteditable="true"], textarea, .npm__react-simple-code-editor__textarea');
+                    if (editable) editable.focus();
+                    else el.focus();
+                }
+            }, 0);
         }
     };
 
-    const duplicateBlock = (index) => {
-        const newBlock = { ...activePage.blocks[index], id: Date.now().toString() };
-        const newBlocks = [...activePage.blocks];
-        newBlocks.splice(index + 1, 0, newBlock);
-        updateBlocksForActivePage(newBlocks);
+    const duplicateBlock = (id) => {
+        setPages(prev => {
+            const duplicateRecursive = (blocks) => {
+                const idx = blocks.findIndex(b => b.id === id);
+                if (idx !== -1) {
+                    const newBlocks = blocks.map(b => ({ ...b, focused: false }));
+                    const newBlock = { ...blocks[idx], id: Date.now().toString(), focused: true };
+                    newBlocks.splice(idx + 1, 0, newBlock);
+                    return newBlocks;
+                }
+                return blocks.map(b => {
+                    if (b.children) return { ...b, children: duplicateRecursive(b.children) };
+                    return b;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: duplicateRecursive(p.blocks) } : p);
+        });
     };
 
     const moveBlock = (dragIndex, hoverIndex) => {
@@ -1373,19 +1618,25 @@ export default function NotionPosts() {
         updateBlocksForActivePage(newBlocks);
     };
 
-    const setFocus = (index) => {
-        updateBlocksForActivePage(activePage.blocks.map((b, i) => ({ ...b, focused: i === index })));
-        // Also programmatically focus the wrapper div for non-editable blocks
+    const setFocus = (id) => {
+        setPages(prev => {
+            const updateRecursive = (blocks) => {
+                return blocks.map(b => {
+                    const isMatch = b.id === id;
+                    const newB = { ...b, focused: isMatch };
+                    if (b.children) return { ...newB, children: updateRecursive(b.children) };
+                    return newB;
+                });
+            };
+            return prev.map(p => p.id === activePageId ? { ...p, blocks: updateRecursive(p.blocks) } : p);
+        });
+
         setTimeout(() => {
-            const wrapper = document.querySelector(`[data-block-index="${index}"]`);
-            if (wrapper) {
-                // Check if a contenteditable or textarea inside is already focused
-                const editable = wrapper.querySelector('[contenteditable="true"], textarea, .npm__react-simple-code-editor__textarea');
-                if (editable) {
-                    editable.focus();
-                } else {
-                    wrapper.focus();
-                }
+            const el = document.querySelector(`[data-block-id="${id}"]`);
+            if (el) {
+                const editable = el.querySelector('[contenteditable="true"], textarea, .npm__react-simple-code-editor__textarea');
+                if (editable) editable.focus();
+                else el.focus();
             }
         }, 0);
     };
@@ -1477,9 +1728,9 @@ export default function NotionPosts() {
                         if (e.target === e.currentTarget && activePage.blocks.length > 0 && !isReadOnly) {
                             const lastBlock = activePage.blocks[activePage.blocks.length - 1];
                             if (lastBlock.type === 'p' && lastBlock.content.replace(/<[^>]+>/g, '').trim() === '') {
-                                setFocus(activePage.blocks.length - 1);
+                                setFocus(lastBlock.id);
                             } else {
-                                addBlock(activePage.blocks.length - 1);
+                                addBlock(lastBlock.id);
                             }
                         }
                     }}>
@@ -1522,8 +1773,10 @@ export default function NotionPosts() {
                                     isSelected={selectedBlockIds.has(block.id)}
                                     clearSelection={clearSelection}
                                     updateBlocksForActivePage={updateBlocksForActivePage}
-                                />
-                            ))}
+                                    focusPrevious={() => { if (i > 0) setFocus(activePage.blocks[i - 1].id); }}
+                                    focusNext={() => { if (i < activePage.blocks.length - 1) setFocus(activePage.blocks[i + 1].id); }}
+                                    selectedBlockIds={selectedBlockIds}
+                                />))}
                         </div>
 
                     </div>
