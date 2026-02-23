@@ -10,6 +10,8 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router-dom';
 import { initialPages } from './data/postsData';
+import { auth, ADMIN_EMAIL, signInWithGoogle, signOutUser, loadPagesFromFirestore, savePagesToFirestore } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 /* Code Editor & Syntax Highlighting */
 import Editor from 'react-simple-code-editor';
@@ -1227,7 +1229,10 @@ function Sidebar({ isOpen, setIsOpen, pages, activePageId, setActivePageId, crea
 }
 
 export default function NotionPosts() {
-    const isReadOnly = !import.meta.env.DEV;
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const isAdmin = user?.email === ADMIN_EMAIL;
+    const isReadOnly = !isAdmin;
 
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -1245,24 +1250,15 @@ export default function NotionPosts() {
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSaveData = async () => {
+        if (!isAdmin) return;
         setIsSaving(true);
         try {
-            const response = await fetch('/api/save-posts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pages)
-            });
-            const result = await response.json();
-            if (result.success) {
-                const btn = document.getElementById('save-btn-text');
-                if (btn) {
-                    btn.innerText = "Saved!";
-                    setTimeout(() => { if (btn) btn.innerText = "Save"; }, 2000);
-                }
-                localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
-            } else {
-                console.warn("Server save failed, using local storage");
-                localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
+            await savePagesToFirestore(pages);
+            localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
+            const btn = document.getElementById('save-btn-text');
+            if (btn) {
+                btn.innerText = "Saved!";
+                setTimeout(() => { if (btn) btn.innerText = "Save"; }, 2000);
             }
         } catch (error) {
             console.error('Save error:', error);
@@ -1293,6 +1289,25 @@ export default function NotionPosts() {
     }, [pages]);
 
     const [activePageId, setActivePageId] = useState(pages[0].id);
+
+    // Auth state listener — also loads latest pages from Firestore
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (u) => {
+            setUser(u);
+            setAuthLoading(false);
+            try {
+                const firestorePages = await loadPagesFromFirestore();
+                if (firestorePages && firestorePages.length > 0) {
+                    setPages(firestorePages);
+                    setActivePageId(firestorePages[0].id);
+                    localStorage.setItem('portfolio-notion-posts', JSON.stringify(firestorePages));
+                }
+            } catch (e) {
+                console.warn('Firestore load failed, using local data', e);
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     const activePage = pages.find(p => p.id === activePageId);
 
@@ -1704,14 +1719,34 @@ export default function NotionPosts() {
                             <span className="text-ink-black font-bold truncate max-w-[200px] md:max-w-none">{activePage?.title?.replace(/<[^>]+>/g, '') || 'Untitled'}</span>
                         </div>
                     </div>
-                    {!isReadOnly && (
-                        <div className="flex items-center">
+                    <div className="flex items-center gap-2">
+                        {isAdmin && (
                             <button onClick={handleSaveData} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm disabled:opacity-50">
                                 <Save size={14} />
                                 <span id="save-btn-text">{isSaving ? 'Saving...' : 'Save'}</span>
                             </button>
-                        </div>
-                    )}
+                        )}
+                        {!authLoading && (
+                            isAdmin ? (
+                                <button
+                                    onClick={signOutUser}
+                                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                    title="Sign out"
+                                >
+                                    {user?.photoURL && <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" />}
+                                    <span className="hidden sm:inline">Sign out</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={signInWithGoogle}
+                                    className="p-1.5 text-gray-300 hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                    title="Admin login"
+                                >
+                                    <Lock size={14} />
+                                </button>
+                            )
+                        )}
+                    </div>
                 </header>
 
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
