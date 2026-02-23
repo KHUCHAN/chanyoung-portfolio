@@ -1247,24 +1247,22 @@ export default function NotionPosts() {
         }
         return initialPages;
     });
-    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved'
+    const isSaving = saveStatus === 'saving';
 
     const handleSaveData = async () => {
         if (!isAdmin) return;
-        setIsSaving(true);
+        setSaveStatus('saving');
         try {
             await savePagesToFirestore(pages);
             localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
-            const btn = document.getElementById('save-btn-text');
-            if (btn) {
-                btn.innerText = "Saved!";
-                setTimeout(() => { if (btn) btn.innerText = "Save"; }, 2000);
-            }
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {
             console.error('Save error:', error);
             localStorage.setItem('portfolio-notion-posts', JSON.stringify(pages));
+            setSaveStatus('idle');
         }
-        setIsSaving(false);
     };
 
     // Auto-save effect
@@ -1723,7 +1721,7 @@ export default function NotionPosts() {
                         {isAdmin && (
                             <button onClick={handleSaveData} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 text-deep-blue text-xs font-bold rounded-lg hover:bg-sky-100 transition-colors border border-sky-100 shadow-sm disabled:opacity-50">
                                 <Save size={14} />
-                                <span id="save-btn-text">{isSaving ? 'Saving...' : 'Save'}</span>
+                                <span>{saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save'}</span>
                             </button>
                         )}
                         {!authLoading && (
